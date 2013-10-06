@@ -236,7 +236,7 @@ void rotate3(int dim, pixel *src, pixel *dst)
 	}
 }
 
-void rotate(int dim, pixel *src, pixel *dst) 
+void rotate2_9_3(int dim, pixel *src, pixel *dst) 
 {
 	int a,b,i,j;
 	int sav=0;	//LICM
@@ -251,6 +251,38 @@ void rotate(int dim, pixel *src, pixel *dst)
 		{
 			//Using for loop unrolling
 			for (b=0; b<32; b++)
+			{
+				sav1 = sav - b;
+				sav2 = j+b;
+				//Use for loop unrolling
+				for (a=0; a<8; a++)
+					dst[RIDX(sav1, i+a, dim)] = src[RIDX(i+a, sav2, dim)];
+			}
+		}
+	}
+}
+
+void rotate(int dim, pixel *src, pixel *dst) 
+{
+	int a,b,i,j;
+	int sav=0;	//LICM
+	int sav1=0;	//LICM
+	int sav2=0;	//LICM
+	int adj_dim = dim-1;
+
+	int j_step = 32;	
+	if (dim > 96)
+		j_step = 64;
+	if (dim > 1024)
+		j_step = 128;
+	
+	for (j=0; j<dim; j+=j_step)
+	{
+		sav = adj_dim-j;
+		for (i=0; i<dim; i+=8)
+		{
+			//Using for loop unrolling
+			for (b=0; b<j_step; b++)
 			{
 				sav1 = sav - b;
 				sav2 = j+b;
