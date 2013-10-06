@@ -303,6 +303,53 @@ void attempt_ten(int dim, pixel *src, pixel *dst)
 	}
 
 }
+
+char rotate_eleven_descr[] = "eleventh attempt: attempt 8 with specific changes for large dim";
+void attempt_eleven(int dim, pixel *src, pixel *dst) 
+{
+    int i, j;
+    int ii, jj;
+    int block_size = 8;
+    int block_size2 = 32;
+    if (dim > 512) {
+        block_size2 = 64;
+    }
+    if (dim > 1024) {
+        block_size2 = 128;
+    }
+
+    int dim_n = dim - 1;
+    int dim_compute = dim * dim - dim;
+
+    int temp = 0;
+    for (j = 0; j < dim; j+=block_size2) {
+    	for (i = 0; i < dim; i+=block_size) {
+            for (jj=j; jj < j+block_size2; jj=jj+2) {
+                int temp = dim_compute-jj*dim;
+	                dst[temp + i] = src[i*dim + jj];
+                    dst[temp + i +1 ] = src[(i+1)*dim + jj];
+                    dst[temp + i+2] = src[(i+2)*dim + jj];
+                    dst[temp + i+3] = src[(i+3)*dim + jj];
+                    dst[temp + i+4] = src[(i+4)*dim + jj];
+                    dst[temp + i +5 ] = src[(i+5)*dim + jj];
+                    dst[temp + i+6] = src[(i+6)*dim + jj];
+                    dst[temp + i+7] = src[(i+7)*dim + jj];
+                    temp = dim_compute-(jj+1)*dim;
+	                dst[temp + i] = src[i*dim + jj+1];
+                    dst[temp + i +1 ] = src[(i+1)*dim + jj+1];
+                    dst[temp + i+2] = src[(i+2)*dim + jj+1];
+                    dst[temp + i+3] = src[(i+3)*dim + jj+1];
+                    dst[temp + i+4] = src[(i+4)*dim + jj+1];
+                    dst[temp + i +5 ] = src[(i+5)*dim + jj+1];
+                    dst[temp + i+6] = src[(i+6)*dim + jj+1];
+                    dst[temp + i+7] = src[(i+7)*dim + jj+1];
+
+            }
+        }
+    }
+
+}
+
 /*********************************************************************
  * register_rotate_functions - Register all of your different versions
  *     of the rotate kernel with the driver by calling the
@@ -325,7 +372,7 @@ void register_rotate_functions()
     add_rotate_function(&attempt_eight, rotate_eight_descr);   
     add_rotate_function(&attempt_nine, rotate_nine_descr);   
     add_rotate_function(&attempt_ten, rotate_ten_descr);   
-    //add_rotate_function(&attempt_eleven, rotate_eleven_descr);   
+    add_rotate_function(&attempt_eleven, rotate_eleven_descr);   
 
     /* ... Register additional rotate functions here */
 }
