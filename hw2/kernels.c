@@ -87,7 +87,7 @@ void attempt_three(int dim, pixel *src, pixel *dst)
 
 }
 
-char rotate_four_descr[] = "fourth attempt: loop unblocking";
+char rotate_four_descr[] = "fourth attempt: tiling";
 void attempt_four(int dim, pixel *src, pixel *dst) 
 {
     int i, j;
@@ -129,7 +129,7 @@ void attempt_five(int dim, pixel *src, pixel *dst)
 
 }
 
-char rotate_six_descr[] = "sixth attempt: restricting block, loop unrolling";
+char rotate_six_descr[] = "sixth attempt: restricting tile, loop unrolling";
 void attempt_six(int dim, pixel *src, pixel *dst) 
 {
     int i, j;
@@ -157,7 +157,7 @@ void attempt_six(int dim, pixel *src, pixel *dst)
 
 }
 
-char rotate_seven_descr[] = "seventh attempt: loop unblocking";
+char rotate_seven_descr[] = "seventh attempt: rectangular tiles";
 void attempt_seven(int dim, pixel *src, pixel *dst) 
 {
     int i, j;
@@ -181,7 +181,7 @@ void attempt_seven(int dim, pixel *src, pixel *dst)
 
 }
 
-char rotate_eight_descr[] = "eighth attempt: loop unblocking";
+char rotate_eight_descr[] = "eighth attempt: loop unrolling";
 void attempt_eight(int dim, pixel *src, pixel *dst) 
 {
     int i, j;
@@ -316,8 +316,8 @@ void register_rotate_functions()
     //add_rotate_function(&naive_rotate, naive_rotate_descr);   
     //add_rotate_function(&rotate, rotate_descr);   
 
-    //add_rotate_function(&attempt_two, rotate_two_descr);   
-    //add_rotate_function(&attempt_three, rotate_three_descr);   
+    add_rotate_function(&attempt_two, rotate_two_descr);   
+    add_rotate_function(&attempt_three, rotate_three_descr);   
     add_rotate_function(&attempt_four, rotate_four_descr);   
     add_rotate_function(&attempt_five, rotate_five_descr);   
     add_rotate_function(&attempt_six, rotate_six_descr);   
