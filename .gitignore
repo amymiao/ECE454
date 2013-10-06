@@ -1,0 +1,36 @@
+# Binaries
+*.bin
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.pyc
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+
+# Swap files #
+##############
+*.swp
+
+# Log Files #
+#############
+*.log
+
+# Images #
+#############
+*.png
+
+# Data files #
+##############
+*.data
+
+# Other #
+##############
