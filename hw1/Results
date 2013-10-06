@@ -1,0 +1,125 @@
+ gprof: -g -pg:
+real	0m5.678s
+user	0m3.696s
+sys	0m0.660s
+
+real	0m5.629s
+user	0m3.688s
+sys	0m0.668s
+
+real	0m5.585s
+user	0m3.700s
+sys	0m0.652s
+
+real	0m5.802s
+user	0m3.636s
+sys	0m0.716s
+
+real	0m5.842s
+user	0m3.748s
+sys	0m0.636s
+
+ gcov: -g -fprofile-arcs -ftest-coverage:
+real	0m6.825s
+user	0m4.356s
+sys	0m0.668s
+
+real	0m6.654s
+user	0m4.216s
+sys	0m0.788s
+
+real	0m6.637s
+user	0m4.284s
+sys	0m0.752s
+
+real	0m6.703s
+user	0m4.264s
+sys	0m0.764s
+
+real	0m6.735s
+user	0m4.296s
+sys	0m0.784s
+
+ -g:
+real	0m5.444s
+user	0m3.684s
+sys	0m0.644s
+
+real	0m5.499s
+user	0m3.676s
+sys	0m0.664s
+
+real	0m5.500s
+user	0m3.724s
+sys	0m0.636s
+
+real	0m5.709s
+user	0m3.652s
+sys	0m0.720s
+
+real	0m5.677s
+user	0m3.664s
+sys	0m0.648s
+
+ -O2:
+real	0m10.105s
+user	0m8.477s
+sys	0m0.664s
+
+real	0m9.886s
+user	0m8.361s
+sys	0m0.680s
+
+real	0m10.093s
+user	0m8.481s
+sys	0m0.648s
+
+real	0m10.051s
+user	0m8.557s
+sys	0m0.584s
+
+real	0m9.990s
+user	0m8.353s
+sys	0m0.764s
+
+ -O3:
+real	0m12.325s
+user	0m10.581s
+sys	0m0.752s
+
+real	0m12.234s
+user	0m10.697s
+sys	0m0.652s
+
+real	0m12.266s
+user	0m10.697s
+sys	0m0.644s
+
+real	0m12.272s
+user	0m10.545s
+sys	0m0.796s
+
+real	0m12.296s
+user	0m10.589s
+sys	0m0.748s
+
+ -Os:
+real	0m8.562s
+user	0m7.032s
+sys	0m0.724s
+
+real	0m8.997s
+user	0m7.172s
+sys	0m0.572s
+
+real	0m8.950s
+user	0m7.120s
+sys	0m0.656s
+
+real	0m8.911s
+user	0m7.172s
+sys	0m0.628s
+
+real	0m8.682s
+user	0m7.132s
+sys	0m0.644s
