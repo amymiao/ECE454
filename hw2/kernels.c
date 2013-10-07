@@ -11,13 +11,13 @@
  * Please fill in the following team struct 
  */
 team_t team = {
-    "TeamName",              /* Team name */
+    "Anonymous",              /* Team name */
 
-    "student1",     /* First member full name */
-    "student1@ecf.utoronto.ca",  /* First member email address */
+    "Calvin Fernandes",     /* First member full name */
+    "calvin@ecf.utoronto",  /* First member email address */
 
-    "",                   /* Second member full name (leave blank if none) */
-    ""                    /* Second member email addr (leave blank if none) */
+    "Everard Francis",     /* Second member full name (leave blank if none) */
+    "everard.francis@utoronto.ca" /* Second member email addr (leave blank if none) */
 };
 
 /***************
@@ -49,10 +49,49 @@ void naive_rotate(int dim, pixel *src, pixel *dst)
  * rotate - Your current working version of rotate
  * IMPORTANT: This is the version you will be graded on
  */
-char rotate_descr[] = "rotate: Current working version";
+char rotate_descr[] = "rotate: Current working version (attempt 11)";
 void rotate(int dim, pixel *src, pixel *dst) 
 {
-    naive_rotate(dim, src, dst);
+    int i, j;
+    int jj;
+    int block_size = 8;
+    int block_size2 = 32;
+    if (dim > 512) {
+        block_size2 = 64;
+    }
+    if (dim > 1024) {
+        block_size2 = 128;
+    }
+
+    int dim_compute = dim * dim - dim;
+
+    int temp = 0;
+    for (j = 0; j < dim; j+=block_size2) {
+    	for (i = 0; i < dim; i+=block_size) {
+            for (jj=j; jj < j+block_size2; jj=jj+2) {
+                int temp = dim_compute-jj*dim;
+	            dst[temp + i] = src[i*dim + jj];
+                dst[temp + i+1] = src[(i+1)*dim + jj];
+                dst[temp + i+2] = src[(i+2)*dim + jj];
+                dst[temp + i+3] = src[(i+3)*dim + jj];
+                dst[temp + i+4] = src[(i+4)*dim + jj];
+                dst[temp + i+5] = src[(i+5)*dim + jj];
+                dst[temp + i+6] = src[(i+6)*dim + jj];
+                dst[temp + i+7] = src[(i+7)*dim + jj];
+                temp = dim_compute-(jj+1)*dim;
+	            dst[temp + i] = src[i*dim + jj+1];
+                dst[temp + i+1] = src[(i+1)*dim + jj+1];
+                dst[temp + i+2] = src[(i+2)*dim + jj+1];
+                dst[temp + i+3] = src[(i+3)*dim + jj+1];
+                dst[temp + i+4] = src[(i+4)*dim + jj+1];
+                dst[temp + i+5] = src[(i+5)*dim + jj+1];
+                dst[temp + i+6] = src[(i+6)*dim + jj+1];
+                dst[temp + i+7] = src[(i+7)*dim + jj+1];
+            }
+        }
+    }
+
+
 }
 
 
@@ -308,7 +347,7 @@ char rotate_eleven_descr[] = "eleventh attempt: attempt 8 with specific changes 
 void attempt_eleven(int dim, pixel *src, pixel *dst) 
 {
     int i, j;
-    int ii, jj;
+    int jj;
     int block_size = 8;
     int block_size2 = 32;
     if (dim > 512) {
@@ -318,7 +357,6 @@ void attempt_eleven(int dim, pixel *src, pixel *dst)
         block_size2 = 128;
     }
 
-    int dim_n = dim - 1;
     int dim_compute = dim * dim - dim;
 
     int temp = 0;
@@ -326,24 +364,23 @@ void attempt_eleven(int dim, pixel *src, pixel *dst)
     	for (i = 0; i < dim; i+=block_size) {
             for (jj=j; jj < j+block_size2; jj=jj+2) {
                 int temp = dim_compute-jj*dim;
-	                dst[temp + i] = src[i*dim + jj];
-                    dst[temp + i +1 ] = src[(i+1)*dim + jj];
-                    dst[temp + i+2] = src[(i+2)*dim + jj];
-                    dst[temp + i+3] = src[(i+3)*dim + jj];
-                    dst[temp + i+4] = src[(i+4)*dim + jj];
-                    dst[temp + i +5 ] = src[(i+5)*dim + jj];
-                    dst[temp + i+6] = src[(i+6)*dim + jj];
-                    dst[temp + i+7] = src[(i+7)*dim + jj];
-                    temp = dim_compute-(jj+1)*dim;
-	                dst[temp + i] = src[i*dim + jj+1];
-                    dst[temp + i +1 ] = src[(i+1)*dim + jj+1];
-                    dst[temp + i+2] = src[(i+2)*dim + jj+1];
-                    dst[temp + i+3] = src[(i+3)*dim + jj+1];
-                    dst[temp + i+4] = src[(i+4)*dim + jj+1];
-                    dst[temp + i +5 ] = src[(i+5)*dim + jj+1];
-                    dst[temp + i+6] = src[(i+6)*dim + jj+1];
-                    dst[temp + i+7] = src[(i+7)*dim + jj+1];
-
+	            dst[temp + i] = src[i*dim + jj];
+                dst[temp + i+1] = src[(i+1)*dim + jj];
+                dst[temp + i+2] = src[(i+2)*dim + jj];
+                dst[temp + i+3] = src[(i+3)*dim + jj];
+                dst[temp + i+4] = src[(i+4)*dim + jj];
+                dst[temp + i+5] = src[(i+5)*dim + jj];
+                dst[temp + i+6] = src[(i+6)*dim + jj];
+                dst[temp + i+7] = src[(i+7)*dim + jj];
+                temp = dim_compute-(jj+1)*dim;
+	            dst[temp + i] = src[i*dim + jj+1];
+                dst[temp + i+1] = src[(i+1)*dim + jj+1];
+                dst[temp + i+2] = src[(i+2)*dim + jj+1];
+                dst[temp + i+3] = src[(i+3)*dim + jj+1];
+                dst[temp + i+4] = src[(i+4)*dim + jj+1];
+                dst[temp + i+5] = src[(i+5)*dim + jj+1];
+                dst[temp + i+6] = src[(i+6)*dim + jj+1];
+                dst[temp + i+7] = src[(i+7)*dim + jj+1];
             }
         }
     }
@@ -360,8 +397,8 @@ void attempt_eleven(int dim, pixel *src, pixel *dst)
 
 void register_rotate_functions() 
 {
-    //add_rotate_function(&naive_rotate, naive_rotate_descr);   
-    //add_rotate_function(&rotate, rotate_descr);   
+    add_rotate_function(&naive_rotate, naive_rotate_descr);   
+    add_rotate_function(&rotate, rotate_descr);   
 
     add_rotate_function(&attempt_two, rotate_two_descr);   
     add_rotate_function(&attempt_three, rotate_three_descr);   
