@@ -14,7 +14,7 @@ team_t team = {
     "Anonymous",              /* Team name */
 
     "Calvin Fernandes",     /* First member full name */
-    "calvin@ecf.utoronto",  /* First member email address */
+    "calvin.fernandes@mail.utoronto.ca",  /* First member email address */
 
     "Everard Francis",     /* Second member full name (leave blank if none) */
     "everard.francis@utoronto.ca" /* Second member email addr (leave blank if none) */
@@ -409,7 +409,7 @@ void register_rotate_functions()
     add_rotate_function(&attempt_eight, rotate_eight_descr);   
     add_rotate_function(&attempt_nine, rotate_nine_descr);   
     add_rotate_function(&attempt_ten, rotate_ten_descr);   
-    add_rotate_function(&attempt_eleven, rotate_eleven_descr);   
+    add_rotate_function(&attempt_eleven, rotate_eleven_descr); 
 
     /* ... Register additional rotate functions here */
 }
