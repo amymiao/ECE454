@@ -1276,16 +1276,17 @@ try_swap(float t,
     static int *nets_to_update = NULL, *net_block_moved = NULL;
 
     max_pins_per_fb = 0;
-    for(i = 0; i < num_types; i++)
-	{
-	    max_pins_per_fb =
-		max(max_pins_per_fb, type_descriptors[i].num_pins);
-	}
+
 
     /* Allocate the local bb_coordinate storage, etc. only once. */
 
     if(bb_coord_new == NULL)
 	{
+        for(i = 0; i < num_types; i++)
+    	{
+	        max_pins_per_fb =
+       		max(max_pins_per_fb, type_descriptors[i].num_pins);
+    	}
 	    bb_coord_new = (struct s_bb *)my_malloc(2 * max_pins_per_fb *
 						    sizeof(struct s_bb));
 	    bb_edge_new = (struct s_bb *)my_malloc(2 * max_pins_per_fb *
@@ -1376,13 +1377,15 @@ try_swap(float t,
 
     for(k = 0; k < num_nets_affected; k++)
 	{
-	    inet = nets_to_update[k];
+	    
 
 	    /* If we swapped two blocks connected to the same net, its bounding box *
 	     * doesn't change.                                                      */
 
 	    if(net_block_moved[k] == FROM_AND_TO)
 		continue;
+
+        inet = nets_to_update[k];
 
 	    if(net[inet].num_sinks < SMALL_NET)
 		{
@@ -3289,8 +3292,10 @@ get_non_updateable_bb(int inet,
 
     int k, xmax, ymax, xmin, ymin, x, y;
 
-    x = block[net[inet].node_block[0]].x;
-    y = block[net[inet].node_block[0]].y;
+    int* huehuehue = net[inet].node_block;
+     
+    x = block[huehuehue[0]].x;
+    y = block[huehuehue[0]].y;
 
     xmin = x;
     ymin = y;
@@ -3299,8 +3304,8 @@ get_non_updateable_bb(int inet,
 
     for(k = 1; k < (net[inet].num_sinks + 1); k++)
 	{
-	    x = block[net[inet].node_block[k]].x;
-	    y = block[net[inet].node_block[k]].y;
+	    x = block[huehuehue[k]].x;
+	    y = block[huehuehue[k]].y;
 
 	    if(x < xmin)
 		{
@@ -3363,6 +3368,8 @@ update_bb(int inet,
     xold = max(min(xold, nx), 1);
     yold = max(min(yold, ny), 1);
 
+    struct s_bb bb_coords_inet = bb_coords[inet];
+
     /* Check if I can update the bounding box incrementally. */
 
     if(xnew < xold)
@@ -3370,7 +3377,7 @@ update_bb(int inet,
 
 	    /* Update the xmax fields for coordinates and number of edges first. */
 
-	    if(xold == bb_coords[inet].xmax)
+	    if(xold == bb_coords_inet.xmax)
 		{		/* Old position at xmax. */
 		    if(bb_num_on_edges[inet].xmax == 1)
 			{
@@ -3382,25 +3389,25 @@ update_bb(int inet,
 			{
 			    bb_edge_new->xmax =
 				bb_num_on_edges[inet].xmax - 1;
-			    bb_coord_new->xmax = bb_coords[inet].xmax;
+			    bb_coord_new->xmax = bb_coords_inet.xmax;
 			}
 		}
 
 	    else
 		{		/* Move to left, old postion was not at xmax. */
-		    bb_coord_new->xmax = bb_coords[inet].xmax;
+		    bb_coord_new->xmax = bb_coords_inet.xmax;
 		    bb_edge_new->xmax = bb_num_on_edges[inet].xmax;
 		}
 
 	    /* Now do the xmin fields for coordinates and number of edges. */
 
-	    if(xnew < bb_coords[inet].xmin)
+	    if(xnew < bb_coords_inet.xmin)
 		{		/* Moved past xmin */
 		    bb_coord_new->xmin = xnew;
 		    bb_edge_new->xmin = 1;
 		}
 
-	    else if(xnew == bb_coords[inet].xmin)
+	    else if(xnew == bb_coords_inet.xmin)
 		{		/* Moved to xmin */
 		    bb_coord_new->xmin = xnew;
 		    bb_edge_new->xmin = bb_num_on_edges[inet].xmin + 1;
@@ -3408,7 +3415,7 @@ update_bb(int inet,
 
 	    else
 		{		/* Xmin unchanged. */
-		    bb_coord_new->xmin = bb_coords[inet].xmin;
+		    bb_coord_new->xmin = bb_coords_inet.xmin;
 		    bb_edge_new->xmin = bb_num_on_edges[inet].xmin;
 		}
 	}
@@ -3419,7 +3426,7 @@ update_bb(int inet,
 
 	    /* Update the xmin fields for coordinates and number of edges first. */
 
-	    if(xold == bb_coords[inet].xmin)
+	    if(xold == bb_coords_inet.xmin)
 		{		/* Old position at xmin. */
 		    if(bb_num_on_edges[inet].xmin == 1)
 			{
@@ -3431,25 +3438,25 @@ update_bb(int inet,
 			{
 			    bb_edge_new->xmin =
 				bb_num_on_edges[inet].xmin - 1;
-			    bb_coord_new->xmin = bb_coords[inet].xmin;
+			    bb_coord_new->xmin = bb_coords_inet.xmin;
 			}
 		}
 
 	    else
 		{		/* Move to right, old position was not at xmin. */
-		    bb_coord_new->xmin = bb_coords[inet].xmin;
+		    bb_coord_new->xmin = bb_coords_inet.xmin;
 		    bb_edge_new->xmin = bb_num_on_edges[inet].xmin;
 		}
 
 	    /* Now do the xmax fields for coordinates and number of edges. */
 
-	    if(xnew > bb_coords[inet].xmax)
+	    if(xnew > bb_coords_inet.xmax)
 		{		/* Moved past xmax. */
 		    bb_coord_new->xmax = xnew;
 		    bb_edge_new->xmax = 1;
 		}
 
-	    else if(xnew == bb_coords[inet].xmax)
+	    else if(xnew == bb_coords_inet.xmax)
 		{		/* Moved to xmax */
 		    bb_coord_new->xmax = xnew;
 		    bb_edge_new->xmax = bb_num_on_edges[inet].xmax + 1;
@@ -3457,15 +3464,15 @@ update_bb(int inet,
 
 	    else
 		{		/* Xmax unchanged. */
-		    bb_coord_new->xmax = bb_coords[inet].xmax;
+		    bb_coord_new->xmax = bb_coords_inet.xmax;
 		    bb_edge_new->xmax = bb_num_on_edges[inet].xmax;
 		}
 	}
     /* End of move to right case. */
     else
 	{			/* xnew == xold -- no x motion. */
-	    bb_coord_new->xmin = bb_coords[inet].xmin;
-	    bb_coord_new->xmax = bb_coords[inet].xmax;
+	    bb_coord_new->xmin = bb_coords_inet.xmin;
+	    bb_coord_new->xmax = bb_coords_inet.xmax;
 	    bb_edge_new->xmin = bb_num_on_edges[inet].xmin;
 	    bb_edge_new->xmax = bb_num_on_edges[inet].xmax;
 	}
@@ -3477,7 +3484,7 @@ update_bb(int inet,
 
 	    /* Update the ymax fields for coordinates and number of edges first. */
 
-	    if(yold == bb_coords[inet].ymax)
+	    if(yold == bb_coords_inet.ymax)
 		{		/* Old position at ymax. */
 		    if(bb_num_on_edges[inet].ymax == 1)
 			{
@@ -3489,25 +3496,25 @@ update_bb(int inet,
 			{
 			    bb_edge_new->ymax =
 				bb_num_on_edges[inet].ymax - 1;
-			    bb_coord_new->ymax = bb_coords[inet].ymax;
+			    bb_coord_new->ymax = bb_coords_inet.ymax;
 			}
 		}
 
 	    else
 		{		/* Move down, old postion was not at ymax. */
-		    bb_coord_new->ymax = bb_coords[inet].ymax;
+		    bb_coord_new->ymax = bb_coords_inet.ymax;
 		    bb_edge_new->ymax = bb_num_on_edges[inet].ymax;
 		}
 
 	    /* Now do the ymin fields for coordinates and number of edges. */
 
-	    if(ynew < bb_coords[inet].ymin)
+	    if(ynew < bb_coords_inet.ymin)
 		{		/* Moved past ymin */
 		    bb_coord_new->ymin = ynew;
 		    bb_edge_new->ymin = 1;
 		}
 
-	    else if(ynew == bb_coords[inet].ymin)
+	    else if(ynew == bb_coords_inet.ymin)
 		{		/* Moved to ymin */
 		    bb_coord_new->ymin = ynew;
 		    bb_edge_new->ymin = bb_num_on_edges[inet].ymin + 1;
@@ -3515,7 +3522,7 @@ update_bb(int inet,
 
 	    else
 		{		/* ymin unchanged. */
-		    bb_coord_new->ymin = bb_coords[inet].ymin;
+		    bb_coord_new->ymin = bb_coords_inet.ymin;
 		    bb_edge_new->ymin = bb_num_on_edges[inet].ymin;
 		}
 	}
@@ -3525,7 +3532,7 @@ update_bb(int inet,
 
 	    /* Update the ymin fields for coordinates and number of edges first. */
 
-	    if(yold == bb_coords[inet].ymin)
+	    if(yold == bb_coords_inet.ymin)
 		{		/* Old position at ymin. */
 		    if(bb_num_on_edges[inet].ymin == 1)
 			{
@@ -3537,25 +3544,25 @@ update_bb(int inet,
 			{
 			    bb_edge_new->ymin =
 				bb_num_on_edges[inet].ymin - 1;
-			    bb_coord_new->ymin = bb_coords[inet].ymin;
+			    bb_coord_new->ymin = bb_coords_inet.ymin;
 			}
 		}
 
 	    else
 		{		/* Moved up, old position was not at ymin. */
-		    bb_coord_new->ymin = bb_coords[inet].ymin;
+		    bb_coord_new->ymin = bb_coords_inet.ymin;
 		    bb_edge_new->ymin = bb_num_on_edges[inet].ymin;
 		}
 
 	    /* Now do the ymax fields for coordinates and number of edges. */
 
-	    if(ynew > bb_coords[inet].ymax)
+	    if(ynew > bb_coords_inet.ymax)
 		{		/* Moved past ymax. */
 		    bb_coord_new->ymax = ynew;
 		    bb_edge_new->ymax = 1;
 		}
 
-	    else if(ynew == bb_coords[inet].ymax)
+	    else if(ynew == bb_coords_inet.ymax)
 		{		/* Moved to ymax */
 		    bb_coord_new->ymax = ynew;
 		    bb_edge_new->ymax = bb_num_on_edges[inet].ymax + 1;
@@ -3563,15 +3570,15 @@ update_bb(int inet,
 
 	    else
 		{		/* ymax unchanged. */
-		    bb_coord_new->ymax = bb_coords[inet].ymax;
+		    bb_coord_new->ymax = bb_coords_inet.ymax;
 		    bb_edge_new->ymax = bb_num_on_edges[inet].ymax;
 		}
 	}
     /* End of move up case. */
     else
 	{			/* ynew == yold -- no y motion. */
-	    bb_coord_new->ymin = bb_coords[inet].ymin;
-	    bb_coord_new->ymax = bb_coords[inet].ymax;
+	    bb_coord_new->ymin = bb_coords_inet.ymin;
+	    bb_coord_new->ymax = bb_coords_inet.ymax;
 	    bb_edge_new->ymin = bb_num_on_edges[inet].ymin;
 	    bb_edge_new->ymax = bb_num_on_edges[inet].ymax;
 	}
