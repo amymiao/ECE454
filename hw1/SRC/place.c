@@ -3292,10 +3292,10 @@ get_non_updateable_bb(int inet,
 
     int k, xmax, ymax, xmin, ymin, x, y;
 
-    int* huehuehue = net[inet].node_block;
+    int* node_block_array = net[inet].node_block;
      
-    x = block[huehuehue[0]].x;
-    y = block[huehuehue[0]].y;
+    x = block[node_block_array[0]].x;
+    y = block[node_block_array[0]].y;
 
     xmin = x;
     ymin = y;
@@ -3304,8 +3304,8 @@ get_non_updateable_bb(int inet,
 
     for(k = 1; k < (net[inet].num_sinks + 1); k++)
 	{
-	    x = block[huehuehue[k]].x;
-	    y = block[huehuehue[k]].y;
+	    x = block[node_block_array[k]].x;
+	    y = block[node_block_array[k]].y;
 
 	    if(x < xmin)
 		{
