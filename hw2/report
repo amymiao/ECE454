@@ -1,0 +1,34 @@
+ECE454: Assignment 2
+Everard Francis: 	997412811
+Calvin Fernandes:	997588873
+Optimizations
+
+When optimizing this algorithm, we followed the principles discussed in class and implemented several solutions to exploit ILP, LICM, tiling, branch reduction and loop unrolling.  Perfstat was used to confirm our improvements and our progress is highlighted below:
+
+Attempt 2: Changing order of loops. Originally looped "i" then "j". 
+	(dim-1-j)*dim computed "j" times instead of "i*j" due to LICM
+	Perfstat: 27689711775 cycles to 23356707152 cycles (15% decrease)
+	Speedup: 1 -> 1.4
+
+Attempt 4: Tiling using a square size of 32.
+	Reduce cache misses on both read and write by reading elements that are temporally close
+    This prevents entries from being kicked out of the cache before we reuse them
+	Perfstat: 111045155 to 37687652 cache misses. 67% Decrease.
+	Speedup: 1.4 -> 2.7
+
+Attempt 7: Changing tile dimensions to 32x8, Rewriting RIDX for LICM
+	Rewriting RIDX to move parts of the computation outside the loop
+	Changing tiling dimensions
+	Perfstat: 37687652 misses to 36645431. 3% Decrease.
+	Speedup: 2.7 -> 2.9 to 3.0
+
+Attempt 8: Loop unrolling, and getting rid of a branch as a result
+    Reduce branch mispredicts and exploit ILP
+	Speedup: 2.9 to 3.0 -> 3.0
+
+Attempt 11: Changing block size of tiling based on dimensions (specific cases for >512)
+	Reduces branch variable computation and number of branches executed for larger values of "dim"
+	5005223605 branches to 3523566658 branches. ~30% Decrease.
+	572231 branch misses to 520011 branch misses.
+	23147466289 instructions to 15789534795 instructions. ~30% Decrease.
+	Speedup: 3.0 -> 3.1
