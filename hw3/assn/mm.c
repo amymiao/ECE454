@@ -103,6 +103,8 @@ int mm_init(void)
     PUT(heap_listp + (2 * WSIZE), PACK(OVERHEAD, 1));   // prologue footer
     PUT(heap_listp + (3 * WSIZE), PACK(0, 1));    // epilogue header
     heap_listp += DSIZE;
+    // Initialize the free list
+    free_list = NULL;
 
     return 0;
 }
