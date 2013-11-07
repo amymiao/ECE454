@@ -333,7 +333,7 @@ void *mm_malloc(size_t size)
     
     if ((bp = find_fit(asize)) != NULL) {
         place(bp, asize);
-        DPRINTF("SERVICED MALLOC (0x%x), size=%d\n",bp,asize);
+        DPRINTF("find fit - SERVICED MALLOC (0x%x), size=%d\n",bp,asize);
         mm_check();
         return bp;
     }
@@ -343,7 +343,7 @@ void *mm_malloc(size_t size)
     if ((bp = extend_heap(extendsize/WSIZE)) == NULL)
         return NULL;
     place(bp, asize);
-    DPRINTF("SERVICED MALLOC (0x%x), size=%d\n",bp,asize);
+    DPRINTF("extendsize - SERVICED MALLOC (0x%x), size=%d\n",bp,asize);
     mm_check();
     
     return bp;
