@@ -390,7 +390,8 @@ void *mm_realloc(void *ptr, size_t size)
  * Check the consistency of the memory heap
  * Return nonzero if the heap is consistant.
  *********************************************************/
-int mm_check(void){
+int mm_check(void)
+{
     #ifdef DEBUG
     void* start = heap_listp;
 
@@ -400,6 +401,31 @@ int mm_check(void){
         start = NEXT_BLKP(start); 
     }
     DPRINTF("\n");
+
+
+    //Free list consistency check - check to see if all blocks in the free list are indeed free
+    free_block* traverse = free_list;
+    int size = -1;
+    int free_status = -1;
+    DPRINTF("\n\nFREE LIST STATS:\n");
+    if (traverse != NULL)
+    {
+        do
+        {
+            size = GET_SIZE(HDRP(traverse));
+            free_status = GET_ALLOC(HDRP(traverse));
+            DPRINTF("Address in Free-List: 0x%x\tSize: %d\tAllocated: %d\n", traverse, size, free_status);
+            if (free_status == 1)
+            {
+                DPRINTF("ERROR: BLOCKS IN FREE LIST ARE ALLOCATED!\n\n\n");
+                break;
+            }
+            traverse = traverse->next;
+        }
+        while (traverse != free_list);  //termination condition of a circular list
+    }
+    DPRINTF("\n");
     #endif
+
     return 1;
 }
