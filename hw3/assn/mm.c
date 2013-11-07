@@ -182,6 +182,8 @@ void *extend_heap(size_t words)
  **********************************************************/
 void * find_fit(size_t asize)
 {
+    DPRINTF("FINDING FIT\n");
+    mm_check();
     // Traverse the free list and find the first fitting block
     // If there is excess space in the free block we found, we
     // place the remainder back into the free list as a smaller free block
@@ -228,7 +230,7 @@ void * find_fit(size_t asize)
             // Example (cont): [H1][ ][ ][ ][ ][F1][H2][ ][ ][F2]
             PUT(HDRP(temp), PACK(newSize,0));
             PUT(FTRP(temp), PACK(newSize,0));
-            printf("Doing free block splitting");
+            DPRINTF("AFTER FREE BLOCK SPLITTING");
             mm_check();
             return userPtr;
         } 
@@ -272,16 +274,18 @@ void mm_free(void *bp)
         return;
     }
     size_t size = GET_SIZE(HDRP(bp));
+    DPRINTF("RECEIVED FREE (0x%x), size=%d\n",bp,size);
 
     if (GET_ALLOC(HDRP(bp)) == 0) {
         // Block was already freed
+        DPRINTF("BLOCK ALREADY FREE\n");
         return;
     }
     
+    mm_check();
     PUT(HDRP(bp), PACK(size,0));
     PUT(FTRP(bp), PACK(size,0));
-    DPRINTF("RECEIVED FREE (0x%x), size=%d\n",bp,size);
-
+    
     free_block* temp = (free_block*)bp;
 
     if (free_list == NULL) {
@@ -298,7 +302,7 @@ void mm_free(void *bp)
         temp->next->prev = temp;
     }
 
-    
+    DPRINTF("AFTER FREE:\n");
     mm_check();
 
     // FIXME: Uncomment
@@ -331,11 +335,13 @@ void *mm_malloc(size_t size)
     else
         asize = DSIZE * ((size + (OVERHEAD) + (DSIZE-1))/ DSIZE);
 
+    DPRINTF("RECEIVED MALLOC: size=%d\n",asize);
+
     /* Search the free list for a fit */
     
     if ((bp = find_fit(asize)) != NULL) {
         place(bp, asize);
-        DPRINTF("find fit - SERVICED MALLOC (0x%x), size=%d\n",bp,asize);
+        DPRINTF("FIND FIT - SERVICED MALLOC (0x%x), size=%d\n",bp,asize);
         mm_check();
         return bp;
     }
@@ -345,7 +351,7 @@ void *mm_malloc(size_t size)
     if ((bp = extend_heap(extendsize/WSIZE)) == NULL)
         return NULL;
     place(bp, asize);
-    DPRINTF("extendsize - SERVICED MALLOC (0x%x), size=%d\n",bp,asize);
+    DPRINTF("EXTENDSIZE - SERVICED MALLOC (0x%x), size=%d\n",bp,asize);
     mm_check();
     
     return bp;
@@ -402,6 +408,7 @@ int mm_check(void)
         DPRINTF("Address: 0x%x\tSize: %d\tAllocated: %d\n",start,GET_SIZE(HDRP(start)),GET_ALLOC(HDRP(start)));
         start = NEXT_BLKP(start); 
     }
+    DPRINTF("Address: 0x%x\tSize: %d\tAllocated: %d [HEAP END]\n",start,GET_SIZE(HDRP(start)),GET_ALLOC(HDRP(start)));
     DPRINTF("\n");
 
 
@@ -409,14 +416,14 @@ int mm_check(void)
     free_block* traverse = free_list;
     int size = -1;
     int free_status = -1;
-    DPRINTF("\n\nFREE LIST STATS:\n");
+    //DPRINTF("\n\nFREE LIST STATS:\n");
     if (traverse != NULL)
     {
         do
         {
             size = GET_SIZE(HDRP(traverse));
             free_status = GET_ALLOC(HDRP(traverse));
-            DPRINTF("Address in Free-List: 0x%x\tSize: %d\tAllocated: %d\n", traverse, size, free_status);
+            //DPRINTF("Address in Free-List: 0x%x\tSize: %d\tAllocated: %d\n", traverse, size, free_status);
             if (free_status == 1)
             {
                 DPRINTF("ERROR: BLOCKS IN FREE LIST ARE ALLOCATED!\n\n\n");
