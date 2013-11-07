@@ -262,10 +262,15 @@ void mm_free(void *bp)
         return;
     }
     size_t size = GET_SIZE(HDRP(bp));
+
+    if (GET_ALLOC(HDRP(bp)) == 0) {
+        // Block was already freed
+        return;
+    }
     
     PUT(HDRP(bp), PACK(size,0));
     PUT(FTRP(bp), PACK(size,0));
-    printf("RECEIVED FREE (0x%x), size=%d\n",bp,size);
+    //printf("RECEIVED FREE (0x%x), size=%d\n",bp,size);
 
     free_block* temp = (free_block*)bp;
 
@@ -284,7 +289,7 @@ void mm_free(void *bp)
     }
 
     
-    mm_check();
+    //mm_check();
 
     // FIXME: Uncomment
     //coalesce(bp);
@@ -320,8 +325,8 @@ void *mm_malloc(size_t size)
     
     if ((bp = find_fit(asize)) != NULL) {
         place(bp, asize);
-        printf("SERVICED MALLOC (0x%x), size=%d\n",bp,asize);
-        mm_check();
+        //printf("SERVICED MALLOC (0x%x), size=%d\n",bp,asize);
+        //mm_check();
         return bp;
     }
 
@@ -330,8 +335,8 @@ void *mm_malloc(size_t size)
     if ((bp = extend_heap(extendsize/WSIZE)) == NULL)
         return NULL;
     place(bp, asize);
-    printf("SERVICED MALLOC (0x%x), size=%d\n",bp,asize);
-    mm_check();
+    //printf("SERVICED MALLOC (0x%x), size=%d\n",bp,asize);
+    //mm_check();
     
     return bp;
 
