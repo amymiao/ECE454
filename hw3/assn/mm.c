@@ -95,6 +95,7 @@ free_block* free_list;
  **********************************************************/
 int mm_init(void)
 {
+    DPRINTF("MM_INIT:\n");
     if ((heap_listp = mem_sbrk(4*WSIZE)) == (void *)-1)
         return -1;
     PUT(heap_listp, 0);                         // alignment padding
@@ -116,6 +117,7 @@ int mm_init(void)
  **********************************************************/
 void *coalesce(void *bp)
 {
+    DPRINTF("COALESCING\n");
     size_t prev_alloc = GET_ALLOC(FTRP(PREV_BLKP(bp)));
     size_t next_alloc = GET_ALLOC(HDRP(NEXT_BLKP(bp)));
     size_t size = GET_SIZE(HDRP(bp));
@@ -155,6 +157,7 @@ void *coalesce(void *bp)
  **********************************************************/
 void *extend_heap(size_t words)
 {
+    DPRINTF("EXTENDING HEAP\n");
     char *bp;
     size_t size;
 
@@ -254,6 +257,7 @@ void * find_fit(size_t asize)
  **********************************************************/
 void place(void* bp, size_t asize)
 {
+    DPRINTF("PLACE - setting allocated bit\n");
     /* Get the current block size */
     size_t bsize = GET_SIZE(HDRP(bp));
 
@@ -364,7 +368,7 @@ void *mm_malloc(size_t size)
  *********************************************************/
 void *mm_realloc(void *ptr, size_t size)
 {
-    
+    DPRINTF("CALLING REALLOC\n");
     // If size == 0 then this is just free, and we return NULL. 
     if (size == 0){
         mm_free(ptr);
