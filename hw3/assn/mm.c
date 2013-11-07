@@ -228,6 +228,8 @@ void * find_fit(size_t asize)
             // Example (cont): [H1][ ][ ][ ][ ][F1][H2][ ][ ][F2]
             PUT(HDRP(temp), PACK(newSize,0));
             PUT(FTRP(temp), PACK(newSize,0));
+            printf("Doing free block splitting");
+            mm_check();
             return userPtr;
         } 
         temp = temp->next;
