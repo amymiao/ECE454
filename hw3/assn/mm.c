@@ -174,7 +174,6 @@ void *extend_heap(size_t words)
     return bp;  //cannot coalesce for now - we will break our free list
 }
 
-
 /**********************************************************
  * find_fit
  * Traverse the heap searching for a block to fit asize
@@ -357,13 +356,14 @@ void *mm_malloc(size_t size)
  *********************************************************/
 void *mm_realloc(void *ptr, size_t size)
 {
-    /* If size == 0 then this is just free, and we return NULL. */
+    
+    // If size == 0 then this is just free, and we return NULL. 
     if (size == 0){
         mm_free(ptr);
         return NULL;
     }
 
-    /* If old ptr is NULL, then this is just malloc. */
+    /// If old ptr is NULL, then this is just malloc. 
     if (ptr == NULL)
         return (mm_malloc(size));
 
@@ -375,13 +375,14 @@ void *mm_realloc(void *ptr, size_t size)
     if (newptr == NULL)
         return NULL;
 
-    /* Copy the old data. */
+    // Copy the old data. 
     copySize = GET_SIZE(HDRP(oldptr));
     if (size < copySize)
         copySize = size;
     memcpy(newptr, oldptr, copySize);
     mm_free(oldptr);
     return newptr;
+
 }
 
 /**********************************************************
