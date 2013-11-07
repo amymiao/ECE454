@@ -46,6 +46,13 @@ team_t team = {
 
 #define MAX(x,y) ((x) > (y)?(x) :(y))
 
+#ifdef DEBUG 
+#define DPRINTF(fmt, ...) \
+    printf(fmt, ## __VA_ARGS__)
+#else
+#define DPRINTF(fmt, ...)
+#endif
+
 /* Pack a size and allocated bit into a word */
 #define PACK(size, alloc) ((size) | (alloc))
 
@@ -270,7 +277,7 @@ void mm_free(void *bp)
     
     PUT(HDRP(bp), PACK(size,0));
     PUT(FTRP(bp), PACK(size,0));
-    //printf("RECEIVED FREE (0x%x), size=%d\n",bp,size);
+    DPRINTF("RECEIVED FREE (0x%x), size=%d\n",bp,size);
 
     free_block* temp = (free_block*)bp;
 
@@ -289,7 +296,7 @@ void mm_free(void *bp)
     }
 
     
-    //mm_check();
+    mm_check();
 
     // FIXME: Uncomment
     //coalesce(bp);
@@ -325,8 +332,8 @@ void *mm_malloc(size_t size)
     
     if ((bp = find_fit(asize)) != NULL) {
         place(bp, asize);
-        //printf("SERVICED MALLOC (0x%x), size=%d\n",bp,asize);
-        //mm_check();
+        DPRINTF("SERVICED MALLOC (0x%x), size=%d\n",bp,asize);
+        mm_check();
         return bp;
     }
 
@@ -335,8 +342,8 @@ void *mm_malloc(size_t size)
     if ((bp = extend_heap(extendsize/WSIZE)) == NULL)
         return NULL;
     place(bp, asize);
-    //printf("SERVICED MALLOC (0x%x), size=%d\n",bp,asize);
-    //mm_check();
+    DPRINTF("SERVICED MALLOC (0x%x), size=%d\n",bp,asize);
+    mm_check();
     
     return bp;
 
@@ -381,13 +388,15 @@ void *mm_realloc(void *ptr, size_t size)
  * Return nonzero if the heap is consistant.
  *********************************************************/
 int mm_check(void){
+    #ifdef DEBUG
     void* start = heap_listp;
 
-    printf("\n\nHEAP STATS:\n");
+    DPRINTF("\n\nHEAP STATS:\n");
     while (GET_SIZE(HDRP(start)) != 0) {
-        printf("Address: 0x%x\tSize: %d\tAllocated: %d\n",start,GET_SIZE(HDRP(start)),GET_ALLOC(HDRP(start)));
+        DPRINTF("Address: 0x%x\tSize: %d\tAllocated: %d\n",start,GET_SIZE(HDRP(start)),GET_ALLOC(HDRP(start)));
         start = NEXT_BLKP(start); 
     }
-    printf("\n");
+    DPRINTF("\n");
+    #endif
     return 1;
 }
