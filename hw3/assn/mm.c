@@ -448,33 +448,45 @@ void *mm_malloc(size_t size)
  *********************************************************/
 void *mm_realloc(void *ptr, size_t size)
 {
+
     DPRINTF("RECEIVED REALLOC: (0x%x), size=%d\n",ptr,size);
-    // If size == 0 then this is just free, and we return NULL.
-    if (size == 0) {
-        mm_free(ptr);
-        return NULL;
+    
+    if (size == 0)
+    {
+    	mm_free(ptr);
+    	return NULL;
     }
 
-    /// If old ptr is NULL, then this is just malloc.
     if (ptr == NULL)
-        return (mm_malloc(size));
+    {
+    	return (mm_malloc(size));
+    }
 
+    size_t aligned_size = ALIGN(size+OVERHEAD);
+    size_t old_size = GET_SIZE(HDRP(ptr));
+
+    //if the old size was enough to work with then return the same pointer - memcpy handled
+    if (old_size >= aligned_size)
+    {
+    	return ptr;
+    }
+
+    //Otherwise we need to do the malloc and free
     void *oldptr = ptr;
     void *newptr;
     size_t copySize;
-    
     newptr = mm_malloc(size);
+    
+    //out of memory
     if (newptr == NULL)
         return NULL;
-
-    // Copy the old data.
-    copySize = GET_SIZE(HDRP(oldptr));
+	
+	copySize = GET_SIZE(HDRP(oldptr));
     if (size < copySize)
         copySize = size;
     memcpy(newptr, oldptr, copySize);
     mm_free(oldptr);
     return newptr;
-
 }
 
 /**********************************************************
