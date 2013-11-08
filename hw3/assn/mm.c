@@ -46,7 +46,7 @@ team_t team = {
 
 #define MAX(x,y) ((x) > (y)?(x) :(y))
 
-#ifdef DEBUG 
+#ifdef DEBUG
 #define DPRINTF(fmt, ...) \
     printf(fmt, ## __VA_ARGS__)
 #else
@@ -108,18 +108,18 @@ void add_to_list(void* bp)
 {
     if (bp == NULL)
         return;
-        
+
     free_block* temp = (free_block*)bp;
 
-    if (free_list == NULL) 
+    if (free_list == NULL)
     {
         // The free list is empty, this will be the first free block. Set head to point to it.
         free_list = temp;
         free_list->next = temp;
         free_list->prev = temp;
-    } 
-    
-    else 
+    }
+
+    else
     {
         // Insert the newly freed block into the start of the free list
         // It will become the new head
@@ -186,7 +186,7 @@ void *coalesce(void *bp)
 
     else {            /* Case 4 */
         size += GET_SIZE(HDRP(PREV_BLKP(bp)))  +
-            GET_SIZE(FTRP(NEXT_BLKP(bp)))  ;
+                GET_SIZE(FTRP(NEXT_BLKP(bp)))  ;
         PUT(HDRP(PREV_BLKP(bp)), PACK(size,0));
         PUT(FTRP(NEXT_BLKP(bp)), PACK(size,0));
         return (PREV_BLKP(bp));
@@ -259,7 +259,7 @@ void * find_fit(size_t asize)
             // we can assign this portion to the user
             void* userPtr = (void*)temp + newSize;
 
-            // Set the header/footer of the user required block with their requested size 
+            // Set the header/footer of the user required block with their requested size
             // Example (cont): [H1][ ][ ][ ][ ][ ][H2][ ][ ][F2]
             PUT(HDRP(userPtr), PACK(asize,0));
             PUT(FTRP(userPtr), PACK(asize,0));
@@ -271,7 +271,7 @@ void * find_fit(size_t asize)
             DPRINTF("AFTER FREE BLOCK SPLITTING");
             mm_check();
             return userPtr;
-        } 
+        }
         temp = temp->next;
     } while (temp != free_list);
     /*void *bp;
@@ -309,7 +309,7 @@ void place(void* bp, size_t asize)
  **********************************************************/
 void mm_free(void *bp)
 {
-    if(bp == NULL){
+    if(bp == NULL) {
         return;
     }
     //size_t size = GET_SIZE(HDRP(bp));
@@ -347,7 +347,7 @@ void mm_free(void *bp)
  **********************************************************/
 void *mm_malloc(size_t size)
 {
-    
+
     size_t asize; /* adjusted block size */
     size_t extendsize; /* amount to extend heap if no fit */
     char * bp;
@@ -365,7 +365,7 @@ void *mm_malloc(size_t size)
     DPRINTF("RECEIVED MALLOC: size=%d\n",asize);
 
     /* Search the free list for a fit */
-    
+
     if ((bp = find_fit(asize)) != NULL) {
         place(bp, asize);
         DPRINTF("FIND FIT - SERVICED MALLOC (0x%x), size=%d\n",bp,asize);
@@ -380,7 +380,7 @@ void *mm_malloc(size_t size)
     place(bp, asize);
     DPRINTF("EXTENDSIZE - SERVICED MALLOC (0x%x), size=%d\n",bp,asize);
     mm_check();
-    
+
     return bp;
 
 }
@@ -392,13 +392,13 @@ void *mm_malloc(size_t size)
 void *mm_realloc(void *ptr, size_t size)
 {
     DPRINTF("CALLING REALLOC\n");
-    // If size == 0 then this is just free, and we return NULL. 
-    if (size == 0){
+    // If size == 0 then this is just free, and we return NULL.
+    if (size == 0) {
         mm_free(ptr);
         return NULL;
     }
 
-    /// If old ptr is NULL, then this is just malloc. 
+    /// If old ptr is NULL, then this is just malloc.
     if (ptr == NULL)
         return (mm_malloc(size));
 
@@ -410,7 +410,7 @@ void *mm_realloc(void *ptr, size_t size)
     if (newptr == NULL)
         return NULL;
 
-    // Copy the old data. 
+    // Copy the old data.
     copySize = GET_SIZE(HDRP(oldptr));
     if (size < copySize)
         copySize = size;
@@ -427,13 +427,13 @@ void *mm_realloc(void *ptr, size_t size)
  *********************************************************/
 int mm_check(void)
 {
-    #ifdef DEBUG
+#ifdef DEBUG
     void* start = heap_listp;
 
     DPRINTF("\n\nHEAP STATS:\n");
     while (GET_SIZE(HDRP(start)) != 0) {
         DPRINTF("Address: 0x%x\tSize: %d\tAllocated: %d\n",start,GET_SIZE(HDRP(start)),GET_ALLOC(HDRP(start)));
-        start = NEXT_BLKP(start); 
+        start = NEXT_BLKP(start);
     }
     DPRINTF("Address: 0x%x\tSize: %d\tAllocated: %d [HEAP END]\n",start,GET_SIZE(HDRP(start)),GET_ALLOC(HDRP(start)));
     DPRINTF("\n");
@@ -475,10 +475,10 @@ int mm_check(void)
         {
             DPRINTF("\nERROR: Address: 0x%x contains a block that is less than the minimum size\n");
         }
-        start = NEXT_BLKP(start); 
+        start = NEXT_BLKP(start);
     }
 
-    #endif
+#endif
 
     return 1;
 }
