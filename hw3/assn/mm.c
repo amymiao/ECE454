@@ -88,6 +88,18 @@ typedef struct free_block {
 
 free_block* free_list;
 
+void remove_from_list(free_block* block) {
+    if (block == NULL) {
+        return;
+    }
+    block->prev->next = block->next; // Make previous free block point to next free block
+    block->next->prev = block->prev; // Make next free block point to previous free block
+    if (free_list == block) {
+        // If we are removing the head pointer, we must set a new head pointer
+        free_list = block->next;
+    }
+}
+
 /**********************************************************
  * mm_init
  * Initialize the heap, including "allocation" of the
@@ -203,12 +215,7 @@ void * find_fit(size_t asize)
             // We found a block that can fit, but cannot be split into an excess free block
             // This is easy to resolve, simply remove it from the free list
             if (temp != temp->next) {
-                temp->prev->next = temp->next; // Make previous free block point to next free block
-                temp->next->prev = temp->prev; // Make next free block point to previous free block
-                if (free_list == temp) {
-                    // If we are removing the head pointer, we must set a new head pointer
-                    free_list = temp->next;
-                }
+                remove_from_list(temp);
             } else {
                 free_list = NULL;
             }
