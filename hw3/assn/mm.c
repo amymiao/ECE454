@@ -87,26 +87,46 @@ typedef struct free_block {
     struct free_block* prev;
 } free_block;
 
-free_block* free_list;
+#define NUM_FREE_LISTS 4
+#define MIN_BLOCK_SIZE 32
+#define MIN_BLOCK_PWR 6
+free_block* free_list_array[NUM_FREE_LISTS];
+
 /* Data structures for free list management END */
+
+int hash_function(int size) {
+    int counter = 0;
+    assert(size >= 2*DSIZE);
+    while (size != 0) {
+        size = size >> 1;
+        counter++;
+    }
+    assert(counter >= 6);
+    counter = counter - MIN_BLOCK_PWR;
+    return counter >= NUM_FREE_LISTS ? NUM_FREE_LISTS-1 : counter;
+}
 
 /* This function removes a free block from the free_list
  * It also adjusts the free_list pointer if needed
  */
 void remove_from_list(free_block* block) {
     DPRINTF("REMOVE_FROM_FREE_LIST: REMOVING 0x%x\n", block);
+
+    size_t size = GET_SIZE(HDRP(block));
+    int free_list_index = hash_function(size);
+
     if (block == NULL) {
         return;
     }
     if (block != block->next) {
         block->prev->next = block->next; // Make previous free block point to next free block
         block->next->prev = block->prev; // Make next free block point to previous free block
-        if (free_list == block) {
+        if (free_list_array[free_list_index] == block) {
             // If we are removing the head pointer, we must set a new head pointer
-            free_list = block->next;
+            free_list_array[free_list_index] = block->next;
         }
     } else  {
-        free_list = NULL;
+        free_list_array[free_list_index] = NULL;
     }
 }
 
@@ -114,24 +134,27 @@ void remove_from_list(free_block* block) {
  */
 void add_to_list(free_block* temp)
 {
+    size_t size = GET_SIZE(HDRP(temp));
+    int free_list_index = hash_function(size);
+
     DPRINTF("ADD_TO_LIST: ADDING 0x%x\n", temp);
     if (temp == NULL)
         return;
 
-    if (free_list == NULL)
+    if (free_list_array[free_list_index] == NULL)
     {
         // The free list is empty, this will be the first free block. Set head to point to it.
-        free_list = temp;
-        free_list->next = temp;
-        free_list->prev = temp;
+        free_list_array[free_list_index] = temp;
+        free_list_array[free_list_index]->next = temp;
+        free_list_array[free_list_index]->prev = temp;
     }
 
     else
     {
         // Insert the newly freed block into the start of the free list
         // It will become the new head
-        temp->next = free_list;
-        temp->prev = free_list->prev;
+        temp->next = free_list_array[free_list_index];
+        temp->prev = free_list_array[free_list_index]->prev;
         temp->prev->next = temp;
         temp->next->prev = temp;
     }
@@ -153,7 +176,10 @@ int mm_init(void)
     PUT(heap_listp + (3 * WSIZE), PACK(0, 1));    // epilogue header
     heap_listp += DSIZE;
     // Initialize the free list
-    free_list = NULL;
+    int i;
+    for (i=0; i < NUM_FREE_LISTS; i++) {
+        free_list_array[i] = NULL;
+    }
 
     return 0;
 }
@@ -237,9 +263,7 @@ void *extend_heap(size_t words)
     PUT(HDRP(NEXT_BLKP(bp)), PACK(0, 1));        // new epilogue header
 
     /* Coalesce if the previous block was free */
-    //return coalesce(bp);
-    //FIXME
-    return bp;  //cannot coalesce for now - we will break our free list
+    return coalesce(bp);
 }
 
 /**********************************************************
@@ -251,15 +275,18 @@ void *extend_heap(size_t words)
 void * find_fit(size_t asize)
 {
     DPRINTF("FINDING FIT\n");
+
+    int free_list_index = hash_function(asize);
+
     mm_check();
     // Traverse the free list and find the first fitting block
     // If there is excess space in the free block we found, we
     // place the remainder back into the free list as a smaller free block
-    if (free_list == NULL) {
+    if (free_list_array[free_list_index] == NULL) {
         // No free blocks in the free list
         return NULL;
     }
-    free_block* temp = free_list;
+    free_block* temp = free_list_array[free_list_index];
     do {
         int size = GET_SIZE(HDRP(temp));
         if (size >= asize && size < (asize + 2*DSIZE)) {
@@ -274,6 +301,7 @@ void * find_fit(size_t asize)
             //          Found free block size = 10
             // [H1][ ][ ][ ][ ][ ][ ][ ][ ][F1]
             // newSize = 6
+            remove_from_list(temp);
             int newSize = size - asize;
 
             // Point to the ending portion of the free block, so that
@@ -289,12 +317,14 @@ void * find_fit(size_t asize)
             // Example (cont): [H1][ ][ ][ ][ ][F1][H2][ ][ ][F2]
             PUT(HDRP(temp), PACK(newSize,0));
             PUT(FTRP(temp), PACK(newSize,0));
+
+            add_to_list(temp);
             DPRINTF("AFTER FREE BLOCK SPLITTING");
             mm_check();
             return userPtr;
         }
         temp = temp->next;
-    } while (temp != free_list);
+    } while (temp != free_list_array[free_list_index]);
     /*void *bp;
 
       for (bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp))
