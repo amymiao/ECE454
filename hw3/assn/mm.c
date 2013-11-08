@@ -87,7 +87,7 @@ typedef struct free_block {
     struct free_block* prev;
 } free_block;
 
-#define NUM_FREE_LISTS 4
+#define NUM_FREE_LISTS 10
 #define MIN_BLOCK_SIZE 32
 #define MIN_BLOCK_PWR 6
 free_block* free_list_array[NUM_FREE_LISTS];
@@ -282,11 +282,19 @@ void * find_fit(size_t asize)
     // Traverse the free list and find the first fitting block
     // If there is excess space in the free block we found, we
     // place the remainder back into the free list as a smaller free block
-    if (free_list_array[free_list_index] == NULL) {
-        // No free blocks in the free list
+    int i;
+    for (i=free_list_index; i < NUM_FREE_LISTS; i++) {
+        if (free_list_array[i] != NULL) {
+            break;
+        }
+    }
+
+    if (i == NUM_FREE_LISTS) {
         return NULL;
     }
-    free_block* temp = free_list_array[free_list_index];
+
+    free_block* temp = free_list_array[i];
+
     do {
         int size = GET_SIZE(HDRP(temp));
         if (size >= asize && size < (asize + 2*DSIZE)) {
@@ -378,6 +386,7 @@ void mm_free(void *bp)
     PUT(FTRP(bp), PACK(size,0));
 
     // After coalescing, we can add the new (possibly bigger) free block to the free list
+    // add_to_list((free_block*)coalesce(bp)); 
     add_to_list((free_block*)coalesce(bp)); 
 
     DPRINTF("AFTER FREE:\n");
@@ -439,7 +448,7 @@ void *mm_malloc(size_t size)
  *********************************************************/
 void *mm_realloc(void *ptr, size_t size)
 {
-    DPRINTF("CALLING REALLOC\n");
+    DPRINTF("RECEIVED REALLOC: (0x%x), size=%d\n",ptr,size);
     // If size == 0 then this is just free, and we return NULL.
     if (size == 0) {
         mm_free(ptr);
@@ -453,7 +462,7 @@ void *mm_realloc(void *ptr, size_t size)
     void *oldptr = ptr;
     void *newptr;
     size_t copySize;
-
+    
     newptr = mm_malloc(size);
     if (newptr == NULL)
         return NULL;
@@ -473,6 +482,9 @@ void *mm_realloc(void *ptr, size_t size)
  * Check the consistency of the memory heap
  * Return nonzero if the heap is consistant.
  *********************************************************/
+#ifndef DEBUG
+ inline
+#endif
 int mm_check(void)
 {
 #ifdef DEBUG
@@ -488,28 +500,30 @@ int mm_check(void)
 
 
     //Free list consistency check - check to see if all blocks in the free list are indeed free
-    free_block* traverse = free_list;
+
+    int i;
     int size = -1;
     int free_status = -1;
-    DPRINTF("\n\nFREE LIST STATS:\n");
-    if (traverse != NULL)
-    {
-        do
+    for (i=0; i < NUM_FREE_LISTS; i++) {
+        free_block* traverse = free_list_array[i];
+        DPRINTF("\nFREE LIST STATS (Range %d-%d):\n",MIN_BLOCK_SIZE << i,MIN_BLOCK_SIZE << (i+1));
+        if (traverse != NULL)
         {
-            size = GET_SIZE(HDRP(traverse));
-            free_status = GET_ALLOC(HDRP(traverse));
-            DPRINTF("Address in Free-List: 0x%x\tSize: %d\tAllocated: %d\n", traverse, size, free_status);
-            if (free_status == 1)
+            do
             {
-                DPRINTF("ERROR: BLOCKS IN FREE LIST ARE ALLOCATED!\n\n\n");
-                break;
+                size = GET_SIZE(HDRP(traverse));
+                free_status = GET_ALLOC(HDRP(traverse));
+                DPRINTF("Address in Free-List: 0x%x\tSize: %d\tAllocated: %d\n", traverse, size, free_status);
+                if (free_status == 1)
+                {
+                    DPRINTF("ERROR: BLOCKS IN FREE LIST ARE ALLOCATED!\n\n\n");
+                    break;
+                }
+                traverse = traverse->next;
             }
-            traverse = traverse->next;
+            while (traverse != free_list_array[i]);  //termination condition of a circular list
         }
-        while (traverse != free_list);  //termination condition of a circular list
     }
-    DPRINTF("\n");
-
     //Check if all blocks are at least the minimum block size and if they are aligned
     start = heap_listp;
     start = NEXT_BLKP(start); //skip the prologue block
@@ -525,7 +539,6 @@ int mm_check(void)
         }
         start = NEXT_BLKP(start);
     }
-
 #endif
 
     return 1;
