@@ -447,6 +447,23 @@ int mm_check(void)
         while (traverse != free_list);  //termination condition of a circular list
     }
     DPRINTF("\n");
+
+    //Check if all blocks are at least the minimum block size
+    start = heap_listp;
+    start = NEXT_BLKP(start); //skip the prologue block
+    DPRINTF("\n\nBLOCK INFO STATS:\n");
+    size = -1;
+    while (GET_SIZE(HDRP(start)) != 0)
+    {
+        size = GET_SIZE(HDRP(start));
+        //DPRINTF("Address: 0x%x\tSize: %d\n",start,GET_SIZE(HDRP(start)));
+        if (size < (DSIZE+OVERHEAD) )
+        {
+            DPRINTF("\nERROR: Address: 0x%x contains a block that is less than the minimum size\n");
+        }
+        start = NEXT_BLKP(start); 
+    }
+
     #endif
 
     return 1;
