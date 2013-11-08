@@ -89,6 +89,7 @@ typedef struct free_block {
 free_block* free_list;
 
 void remove_from_list(free_block* block) {
+    DPRINTF("REMOVE_FROM_FREE_LIST: REMOVING 0x%x\n", block);
     if (block == NULL) {
         return;
     }
@@ -106,6 +107,7 @@ void remove_from_list(free_block* block) {
 
 void add_to_list(void* bp)
 {
+    DPRINTF("ADD_TO_LIST: ADDING 0x%x\n", bp);
     if (bp == NULL)
         return;
 
@@ -312,7 +314,7 @@ void mm_free(void *bp)
     if(bp == NULL) {
         return;
     }
-    //size_t size = GET_SIZE(HDRP(bp));
+    size_t size = GET_SIZE(HDRP(bp));
     DPRINTF("RECEIVED FREE (0x%x), size=%d\n",bp,size);
 
     if (GET_ALLOC(HDRP(bp)) == 0) {
@@ -320,8 +322,6 @@ void mm_free(void *bp)
         DPRINTF("BLOCK ALREADY FREE\n");
         return;
     }
-
-    size_t size = GET_SIZE(HDRP(bp));
 
     //mark allocated bit 0
     PUT(HDRP(bp), PACK(size,0));
