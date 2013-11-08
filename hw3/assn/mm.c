@@ -104,6 +104,32 @@ void remove_from_list(free_block* block) {
     }
 }
 
+void add_to_list(void* bp)
+{
+    if (bp == NULL)
+        return;
+        
+    free_block* temp = (free_block*)bp;
+
+    if (free_list == NULL) 
+    {
+        // The free list is empty, this will be the first free block. Set head to point to it.
+        free_list = temp;
+        free_list->next = temp;
+        free_list->prev = temp;
+    } 
+    
+    else 
+    {
+        // Insert the newly freed block into the start of the free list
+        // It will become the new head
+        temp->next = free_list;
+        temp->prev = free_list->prev;
+        temp->prev->next = temp;
+        temp->next->prev = temp;
+    }
+}
+
 /**********************************************************
  * mm_init
  * Initialize the heap, including "allocation" of the
@@ -286,7 +312,7 @@ void mm_free(void *bp)
     if(bp == NULL){
         return;
     }
-    size_t size = GET_SIZE(HDRP(bp));
+    //size_t size = GET_SIZE(HDRP(bp));
     DPRINTF("RECEIVED FREE (0x%x), size=%d\n",bp,size);
 
     if (GET_ALLOC(HDRP(bp)) == 0) {
@@ -294,26 +320,15 @@ void mm_free(void *bp)
         DPRINTF("BLOCK ALREADY FREE\n");
         return;
     }
-    
-    mm_check();
+
+    size_t size = GET_SIZE(HDRP(bp));
+
+    //mark allocated bit 0
     PUT(HDRP(bp), PACK(size,0));
     PUT(FTRP(bp), PACK(size,0));
-    
-    free_block* temp = (free_block*)bp;
 
-    if (free_list == NULL) {
-        // The free list is empty, this will be the first free block. Set head to point to it.
-        free_list = temp;
-        free_list->next = temp;
-        free_list->prev = temp;
-    } else {
-        // Insert the newly freed block into the start of the free list
-        // It will become the new head
-        temp->next = free_list;
-        temp->prev = free_list->prev;
-        temp->prev->next = temp;
-        temp->next->prev = temp;
-    }
+    mm_check();
+    add_to_list(bp);    //add block to free list
 
     DPRINTF("AFTER FREE:\n");
     mm_check();
@@ -321,7 +336,6 @@ void mm_free(void *bp)
     // FIXME: Uncomment
     //coalesce(bp);
 }
-
 
 /**********************************************************
  * mm_malloc
