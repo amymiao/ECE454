@@ -448,7 +448,7 @@ int mm_check(void)
     }
     DPRINTF("\n");
 
-    //Check if all blocks are at least the minimum block size
+    //Check if all blocks are at least the minimum block size and if they are aligned
     start = heap_listp;
     start = NEXT_BLKP(start); //skip the prologue block
     DPRINTF("\n\nBLOCK INFO STATS:\n");
@@ -457,7 +457,7 @@ int mm_check(void)
     {
         size = GET_SIZE(HDRP(start));
         //DPRINTF("Address: 0x%x\tSize: %d\n",start,GET_SIZE(HDRP(start)));
-        if (size < (DSIZE+OVERHEAD) )
+        if (size < (DSIZE+OVERHEAD) || ALIGN(size) != size )
         {
             DPRINTF("\nERROR: Address: 0x%x contains a block that is less than the minimum size\n");
         }
