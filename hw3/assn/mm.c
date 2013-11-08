@@ -81,13 +81,18 @@ int mm_check();
 
 void* heap_listp = NULL;
 
+/* Data structures for free list management BEGIN */
 typedef struct free_block {
     struct free_block* next;
     struct free_block* prev;
 } free_block;
 
 free_block* free_list;
+/* Data structures for free list management END */
 
+/* This function removes a free block from the free_list
+ * It also adjusts the free_list pointer if needed
+ */
 void remove_from_list(free_block* block) {
     DPRINTF("REMOVE_FROM_FREE_LIST: REMOVING 0x%x\n", block);
     if (block == NULL) {
@@ -105,13 +110,13 @@ void remove_from_list(free_block* block) {
     }
 }
 
-void add_to_list(void* bp)
+/* This function adds a free block to the free_list
+ */
+void add_to_list(free_block* temp)
 {
-    DPRINTF("ADD_TO_LIST: ADDING 0x%x\n", bp);
-    if (bp == NULL)
+    DPRINTF("ADD_TO_LIST: ADDING 0x%x\n", temp);
+    if (temp == NULL)
         return;
-
-    free_block* temp = (free_block*)bp;
 
     if (free_list == NULL)
     {
@@ -173,6 +178,10 @@ void *coalesce(void *bp)
     }
 
     else if (prev_alloc && !next_alloc) { /* Case 2 */
+        // Remove the next free block from free_list
+        free_block* temp = (free_block*)NEXT_BLKP(bp);
+        remove_from_list(temp);
+
         size += GET_SIZE(HDRP(NEXT_BLKP(bp)));
         PUT(HDRP(bp), PACK(size, 0));
         PUT(FTRP(bp), PACK(size, 0));
@@ -180,6 +189,10 @@ void *coalesce(void *bp)
     }
 
     else if (!prev_alloc && next_alloc) { /* Case 3 */
+        // Remove the prev free block from free_list
+        free_block* temp = (free_block*)PREV_BLKP(bp);
+        remove_from_list(temp);
+
         size += GET_SIZE(HDRP(PREV_BLKP(bp)));
         PUT(FTRP(bp), PACK(size, 0));
         PUT(HDRP(PREV_BLKP(bp)), PACK(size, 0));
@@ -187,6 +200,12 @@ void *coalesce(void *bp)
     }
 
     else {            /* Case 4 */
+        // Remove both the next and prev free blocks from free list
+        free_block* temp = (free_block*)PREV_BLKP(bp);
+        remove_from_list(temp);
+        temp = (free_block*)NEXT_BLKP(bp);
+        remove_from_list(temp);
+
         size += GET_SIZE(HDRP(PREV_BLKP(bp)))  +
                 GET_SIZE(FTRP(NEXT_BLKP(bp)))  ;
         PUT(HDRP(PREV_BLKP(bp)), PACK(size,0));
@@ -324,17 +343,16 @@ void mm_free(void *bp)
     }
 
     //mark allocated bit 0
+    mm_check();
     PUT(HDRP(bp), PACK(size,0));
     PUT(FTRP(bp), PACK(size,0));
 
-    mm_check();
-    add_to_list(bp);    //add block to free list
+    // After coalescing, we can add the new (possibly bigger) free block to the free list
+    add_to_list((free_block*)coalesce(bp)); 
 
     DPRINTF("AFTER FREE:\n");
     mm_check();
 
-    // FIXME: Uncomment
-    //coalesce(bp);
 }
 
 /**********************************************************
@@ -443,14 +461,14 @@ int mm_check(void)
     free_block* traverse = free_list;
     int size = -1;
     int free_status = -1;
-    //DPRINTF("\n\nFREE LIST STATS:\n");
+    DPRINTF("\n\nFREE LIST STATS:\n");
     if (traverse != NULL)
     {
         do
         {
             size = GET_SIZE(HDRP(traverse));
             free_status = GET_ALLOC(HDRP(traverse));
-            //DPRINTF("Address in Free-List: 0x%x\tSize: %d\tAllocated: %d\n", traverse, size, free_status);
+            DPRINTF("Address in Free-List: 0x%x\tSize: %d\tAllocated: %d\n", traverse, size, free_status);
             if (free_status == 1)
             {
                 DPRINTF("ERROR: BLOCKS IN FREE LIST ARE ALLOCATED!\n\n\n");
