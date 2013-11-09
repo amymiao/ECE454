@@ -532,6 +532,14 @@ int mm_check(void)
                     DPRINTF("ERROR: BLOCKS IN FREE LIST ARE ALLOCATED!\n\n\n");
                     break;
                 }
+
+                //checking if pointers in the free list are within the heap
+                if ((void*)traverse > mem_heap_hi() || (void*)traverse < heap_listp )
+                {
+                    DPRINTF("ERROR: 0x%x in the free list is not found in the heap\n\n\n", traverse);
+                    break;
+                }
+
                 traverse = traverse->next;
             }
             while (traverse != free_list_array[i]);  //termination condition of a circular list
@@ -568,7 +576,7 @@ int mm_check(void)
         //Coalesce check for contiguous free blocks (whether before or after)
         //This check should only be done before program termination otherwise extraneous errors will result when block splitting occurs
         //if ( (GET_ALLOC(HDRP(start)) == 0) && (GET_ALLOC(HDRP(NEXT_BLKP(start))) == 0) && start != heap_listp && NEXT_BLKP(start) != mem_heap_hi() )
-        {
+        //{
         //	DPRINTF("\nERROR: Address: 0x%x has an adjacent block 0x%x that are not coalesced\n", start, NEXT_BLKP(start));
         //}
 
