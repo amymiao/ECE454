@@ -87,7 +87,7 @@ typedef struct free_block {
     struct free_block* prev;
 } free_block;
 
-#define NUM_FREE_LISTS 10
+#define NUM_FREE_LISTS 8
 #define MIN_BLOCK_SIZE 32
 #define MIN_BLOCK_PWR 6
 free_block* free_list_array[NUM_FREE_LISTS];
@@ -509,9 +509,43 @@ void *mm_realloc(void *ptr, size_t size)
     } 
 
     //Handle expand case
+    //User wants more data
     else 
     {
-        // CASE 2 - User wants to grow the allocation
+    	/*
+    	//Attempt a coalesce 
+    	//use ptr to do the coalescing and oldptr will point to the payload
+
+    	//Mark as free so coalesce will not complain and pray to God this doesn't mess up - it did so I didn't pray hard enough
+    	//old_size is what the block originally was
+    	PUT(HDRP(ptr), PACK(old_size,0));
+    	PUT(FTRP(ptr), PACK(old_size,0));
+    	ptr = coalesce(ptr);
+
+    	
+    	size_t coalesced_size = GET_SIZE(HDRP(ptr));
+    	if (coalesced_size >= padded_size)
+    	{
+    		//coalesce worked properly
+    		//remove the overhead so we can memcpy properly
+    		size_t payload_size = old_size-OVERHEAD;
+    		if (ptr < oldptr)	//we coalesced with the previous block
+    			memcpy(ptr, oldptr, payload_size);	//shift the payload if necessary
+
+    		//fix the allocated bits - give to user
+    		PUT(HDRP(ptr), PACK(old_size,1));
+    		PUT(FTRP(ptr), PACK(old_size,1));
+
+    		return ptr;
+    	}
+
+    	if (coalesced_size < padded_size)
+    	{
+    		//coalesce didnt help - already marked deallocated so give it to the free list
+    		add_to_list(ptr);
+    	}
+		*/
+        // Worst case scenario - This means an extend_heap will most likely be done
         newptr = mm_malloc(size);
         if (newptr == NULL) {
             return NULL;
