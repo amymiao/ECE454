@@ -471,12 +471,46 @@ void *mm_realloc(void *ptr, size_t size)
     else
         padded_size = DSIZE * ((size + (OVERHEAD) + (DSIZE-1))/ DSIZE);
 
-    // For now handle 2 cases
-    if (padded_size <= old_size) {
-        // CASE 1 - User wants to shrink the allocation
-        memcpy(ptr, oldptr, size);
-        return ptr;
-    } else {
+    // Handle shrink case
+    if (padded_size <= old_size) 
+    {
+        // CASE 1 - User wants to shrink the allocation 
+    	//old_size = padded_size + excess 
+    	//check if excess is >= MIN_BLOCK_SIZE for tearing
+    	size_t excess = old_size - padded_size;
+    	
+    	//tearing possible
+    	if (excess >= MIN_BLOCK_SIZE)
+    	{
+    		//Fix the 2nd part of the block (the tear) - send this to the free list
+    		newptr = (void *)oldptr+padded_size;	//get a pointer to the payload of the torn block
+    		PUT(HDRP(newptr), PACK(excess,0));		//set the proper size for the header of the torn block - deallocate markation
+            PUT(FTRP(newptr), PACK(excess,0));		//set the proper size for the footer of the torn block - deallocate markation
+            add_to_list(newptr);
+
+            //Fix the 1st part of the block - the part we send to the user
+            //The part of the relevant data is already sitting in the payload so we can return this once fixed
+            PUT(HDRP(oldptr), PACK(padded_size,1));		//set the proper size for the header of the torn block - set allocated as we give to user
+            PUT(FTRP(oldptr), PACK(padded_size,1));		//^ for footer
+            //DPRINTF("TORN CASE HAPPENED!\n");
+            return oldptr;	//give this to the user
+    	}
+
+    	//tearing impossible - excess data can not be torn
+    	if (excess < MIN_BLOCK_SIZE)
+    	{
+    		//DPRINTF("NO-TEAR CASE HAPPENED!\n");
+    		return oldptr;
+    	}
+
+
+        //memcpy(ptr, oldptr, size);
+        //return ptr;
+    } 
+
+    //Handle expand case
+    else 
+    {
         // CASE 2 - User wants to grow the allocation
         newptr = mm_malloc(size);
         if (newptr == NULL) {
@@ -491,6 +525,8 @@ void *mm_realloc(void *ptr, size_t size)
         return newptr;
     }
 
+    //printf("WTF\n");
+    return NULL;
     /* assert(1==0);
 
      newptr = mm_malloc(size);
