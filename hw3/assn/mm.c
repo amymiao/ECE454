@@ -261,10 +261,11 @@ void *deferred_coalesce(size_t size)
  	for (i=0; i < NUM_FREE_LISTS; i++)
  	{
  		traverse = free_list_array[i];
- 		if (traverse != NULL)	//list should not be empty
+ 		if (free_list_array[i] != NULL)	//list should not be empty
  		{
  			do
  			{
+
  			   /* block is already in the free list so we don't need to do
  				* anything besides removing it from the free list before we
  				* coalesce. We have to be careful because when we reinsert 
@@ -278,11 +279,11 @@ void *deferred_coalesce(size_t size)
  				//was not enough then it will get placed in another free list
  				//thus breaking our traversal in this free list
  				//we need to ensure we stay in the current free list
- 				free_block *next_position = traverse->next;
 
  				remove_from_list(traverse);		//remove block from the free list
  				
  				//this can remove multiple blocks from the free list
+ 				size_t old_size = GET_SIZE(HDRP(traverse));
  				traverse = coalesce(traverse);
  				size_t new_size = GET_SIZE(HDRP(traverse));
  				if (GET_SIZE(HDRP(traverse)) >= size)
@@ -302,15 +303,16 @@ void *deferred_coalesce(size_t size)
  					add_to_list(traverse);
  				}
 
- 				//we kept a marker to the next element in the free block that we are at
- 				//use that to stay in the correct free list. However this is not enough
- 				//because this is a circular free list. We need to check if this list
- 				//is empty
- 				if (free_list_array[i] != NULL)
- 					traverse = next_position;
- 				else
- 					traverse = free_list_array[i];	//list is NULL - move to the next one
+ 				if (old_size == new_size)
+ 				{
+ 					//still in the same list
+ 					traverse = traverse->next;
+ 				}
 
+ 				else 
+ 				{
+ 					traverse = free_list_array[i];	//reset the pointer and start at the beginning
+ 				}
  			}
  			while (traverse != free_list_array[i]);
  		}
