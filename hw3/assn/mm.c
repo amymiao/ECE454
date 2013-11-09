@@ -264,7 +264,12 @@ void *extend_heap(size_t words)
     PUT(HDRP(NEXT_BLKP(bp)), PACK(0, 1));        // new epilogue header
 
     /* Coalesce if the previous block was free */
-    return coalesce(bp);
+    // FIXME: This cannot be done right now
+    // because realloc marks a block as "free" - which becomes a problem as coalese
+    // will try to merge that block with this one, and therefore remove the old one from the list
+    // since it was never in the list, it will seg fault
+    //return coalesce(bp);
+    return bp;
 }
 
 /**********************************************************
@@ -460,6 +465,7 @@ void *mm_realloc(void *ptr, size_t size)
     if (ptr == NULL)
         return (mm_malloc(size));
 
+    mm_check();
     void *oldptr = ptr;
     void *newptr;
 
@@ -478,6 +484,9 @@ void *mm_realloc(void *ptr, size_t size)
     	//old_size = padded_size + excess 
     	//check if excess is >= MIN_BLOCK_SIZE for tearing
     	size_t excess = old_size - padded_size;
+
+        // FIXME right now its faster to not bother tearing. Doing this return gets us +2 utilization points
+        return oldptr;
     	
     	//tearing possible
     	if (excess >= MIN_BLOCK_SIZE)
@@ -486,7 +495,7 @@ void *mm_realloc(void *ptr, size_t size)
     		newptr = (void *)oldptr+padded_size;	//get a pointer to the payload of the torn block
     		PUT(HDRP(newptr), PACK(excess,0));		//set the proper size for the header of the torn block - deallocate markation
             PUT(FTRP(newptr), PACK(excess,0));		//set the proper size for the footer of the torn block - deallocate markation
-            add_to_list(newptr);
+            add_to_list((free_block*)newptr);
 
             //Fix the 1st part of the block - the part we send to the user
             //The part of the relevant data is already sitting in the payload so we can return this once fixed
@@ -512,7 +521,7 @@ void *mm_realloc(void *ptr, size_t size)
     //User wants more data
     else 
     {
-    	/*
+    	
     	//Attempt a coalesce 
     	//use ptr to do the coalescing and oldptr will point to the payload
 
@@ -521,7 +530,7 @@ void *mm_realloc(void *ptr, size_t size)
     	PUT(HDRP(ptr), PACK(old_size,0));
     	PUT(FTRP(ptr), PACK(old_size,0));
     	ptr = coalesce(ptr);
-
+        mm_check();
     	
     	size_t coalesced_size = GET_SIZE(HDRP(ptr));
     	if (coalesced_size >= padded_size)
@@ -529,25 +538,19 @@ void *mm_realloc(void *ptr, size_t size)
     		//coalesce worked properly
     		//remove the overhead so we can memcpy properly
     		size_t payload_size = old_size-OVERHEAD;
-    		if (ptr < oldptr)	//we coalesced with the previous block
-    			memcpy(ptr, oldptr, payload_size);	//shift the payload if necessary
+            // We have to use memmove because of potential overlap. Memcopy does not handle overlap
+    		memmove(ptr, oldptr, payload_size);	//shift the payload if necessary
 
     		//fix the allocated bits - give to user
-    		PUT(HDRP(ptr), PACK(old_size,1));
-    		PUT(FTRP(ptr), PACK(old_size,1));
-
+    		PUT(HDRP(ptr), PACK(coalesced_size,1));
+    		PUT(FTRP(ptr), PACK(coalesced_size,1));
     		return ptr;
     	}
 
-    	if (coalesced_size < padded_size)
-    	{
-    		//coalesce didnt help - already marked deallocated so give it to the free list
-    		add_to_list(ptr);
-    	}
-		*/
         // Worst case scenario - This means an extend_heap will most likely be done
         newptr = mm_malloc(size);
         if (newptr == NULL) {
+            printf("WTF?\n");
             return NULL;
         }
 
@@ -555,7 +558,10 @@ void *mm_realloc(void *ptr, size_t size)
         //this should avoid problems
         size_t payload_size = old_size-OVERHEAD;
         memcpy(newptr, oldptr, payload_size);
-        mm_free(oldptr);
+
+        // The old location was coalesed and is now free. Add it to the free list
+        add_to_list((free_block*)ptr);
+
         return newptr;
     }
 
