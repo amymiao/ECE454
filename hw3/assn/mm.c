@@ -387,8 +387,8 @@ void mm_free(void *bp)
     PUT(FTRP(bp), PACK(size,0));
 
     // After coalescing, we can add the new (possibly bigger) free block to the free list
-    // add_to_list((free_block*)coalesce(bp)); 
-    add_to_list((free_block*)coalesce(bp)); 
+    // add_to_list((free_block*)coalesce(bp));
+    add_to_list((free_block*)coalesce(bp));
 
     DPRINTF("AFTER FREE:\n");
     mm_check();
@@ -462,7 +462,6 @@ void *mm_realloc(void *ptr, size_t size)
 
     void *oldptr = ptr;
     void *newptr;
-    size_t copySize;
 
     size_t old_size = GET_SIZE(HDRP(oldptr));
     size_t padded_size;
@@ -481,27 +480,33 @@ void *mm_realloc(void *ptr, size_t size)
         // CASE 2 - User wants to grow the allocation
         newptr = mm_malloc(size);
         if (newptr == NULL) {
-            return NULL;   
+            return NULL;
         }
-        memcpy(newptr, oldptr, old_size);
+
+        //remove the overhead that is calculated using the SIZE macro and only copy what is in the payload
+        //this should avoid problems
+        size_t payload_size = old_size-OVERHEAD;
+        memcpy(newptr, oldptr, payload_size);
         mm_free(oldptr);
         return newptr;
     }
 
-    assert(1==0);
-    
-    newptr = mm_malloc(size);
-    if (newptr == NULL)
-        return NULL;
+    /* assert(1==0);
 
-    // Copy the old data.
-    copySize = GET_SIZE(HDRP(oldptr));
-    if (size < copySize)
-        copySize = size;
-    memcpy(newptr, oldptr, copySize);
-    mm_free(oldptr);
-    return newptr;
+     newptr = mm_malloc(size);
+     if (newptr == NULL)
+         return NULL;
 
+     // Copy the old data.
+    printf("copySize (includes HDR+FTR) before removing OVERHEAD:%d\n", (int)copySize);
+     copySize = GET_SIZE(HDRP(oldptr)) - OVERHEAD;
+     printf("copySize without OVERHEAD:%d\n", (int)copySize);
+     if (size < copySize)
+         copySize = size;
+     memcpy(newptr, oldptr, copySize);
+     mm_free(oldptr);
+     return newptr;
+    */
 }
 
 /**********************************************************
@@ -510,7 +515,7 @@ void *mm_realloc(void *ptr, size_t size)
  * Return nonzero if the heap is consistant.
  *********************************************************/
 #ifndef DEBUG
- inline
+inline
 #endif
 int mm_check(void)
 {
@@ -578,13 +583,13 @@ int mm_check(void)
         //DSIZE alignment check
         if (size % DSIZE)
         {
-        	DPRINTF("\nERROR: Address: 0x%x contains a block that is not aligned\n", start);	
+            DPRINTF("\nERROR: Address: 0x%x contains a block that is not aligned\n", start);
         }
 
         //Header footer mismatch check
         if ( GET_SIZE(HDRP(start)) != GET_SIZE(FTRP(start)) )
         {
-        	DPRINTF("\nERROR: Address: 0x%x has a header that does not match its footer\n", start);	
+            DPRINTF("\nERROR: Address: 0x%x has a header that does not match its footer\n", start);
         }
 
         //Coalesce check for contiguous free blocks (whether before or after)
