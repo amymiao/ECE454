@@ -92,6 +92,7 @@ typedef struct free_block {
 #define MIN_BLOCK_PWR 6
 free_block* free_list_array[NUM_FREE_LISTS];
 
+
 /* Data structures for free list management END */
 
 int hash_function(int size) {
@@ -545,12 +546,35 @@ int mm_check(void)
     {
         size = GET_SIZE(HDRP(start));
         //DPRINTF("Address: 0x%x\tSize: %d\n",start,GET_SIZE(HDRP(start)));
+
+        //Minimum size check
         if (size < (DSIZE+OVERHEAD) || ALIGN(size) != size )
         {
-            DPRINTF("\nERROR: Address: 0x%x contains a block that is less than the minimum size\n");
+            DPRINTF("\nERROR: Address: 0x%x contains a block that is less than the minimum size\n", start);
         }
+
+        //DSIZE alignment check
+        if (size % DSIZE)
+        {
+        	DPRINTF("\nERROR: Address: 0x%x contains a block that is not aligned\n", start);	
+        }
+
+        //Header footer mismatch check
+        if ( GET_SIZE(HDRP(start)) != GET_SIZE(FTRP(start)) )
+        {
+        	DPRINTF("\nERROR: Address: 0x%x has a header that does not match its footer\n", start);	
+        }
+
+        //Coalesce check for contiguous free blocks (whether before or after)
+        //This check should only be done before program termination otherwise extraneous errors will result when block splitting occurs
+        //if ( (GET_ALLOC(HDRP(start)) == 0) && (GET_ALLOC(HDRP(NEXT_BLKP(start))) == 0) && start != heap_listp && NEXT_BLKP(start) != mem_heap_hi() )
+        {
+        //	DPRINTF("\nERROR: Address: 0x%x has an adjacent block 0x%x that are not coalesced\n", start, NEXT_BLKP(start));
+        //}
+
         start = NEXT_BLKP(start);
     }
+
 #endif
 
     return 1;
