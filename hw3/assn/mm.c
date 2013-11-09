@@ -449,45 +449,59 @@ void *mm_malloc(size_t size)
  *********************************************************/
 void *mm_realloc(void *ptr, size_t size)
 {
-
     DPRINTF("RECEIVED REALLOC: (0x%x), size=%d\n",ptr,size);
-    
-    if (size == 0)
-    {
-    	mm_free(ptr);
-    	return NULL;
+    // If size == 0 then this is just free, and we return NULL.
+    if (size == 0) {
+        mm_free(ptr);
+        return NULL;
     }
 
+    /// If old ptr is NULL, then this is just malloc.
     if (ptr == NULL)
-    {
-    	return (mm_malloc(size));
-    }
+        return (mm_malloc(size));
 
-    size_t aligned_size = ALIGN(size+OVERHEAD);
-    size_t old_size = GET_SIZE(HDRP(ptr));
-
-    //if the old size was enough to work with then return the same pointer - memcpy handled
-    if (old_size >= aligned_size)
-    {
-    	return ptr;
-    }
-
-    //Otherwise we need to do the malloc and free
     void *oldptr = ptr;
     void *newptr;
     size_t copySize;
-    newptr = mm_malloc(size);
+
+    size_t old_size = GET_SIZE(HDRP(oldptr));
+    size_t padded_size;
+
+    if (size <= DSIZE)
+        padded_size = DSIZE + OVERHEAD;
+    else
+        padded_size = DSIZE * ((size + (OVERHEAD) + (DSIZE-1))/ DSIZE);
+
+    // For now handle 2 cases
+    if (padded_size <= old_size) {
+        // CASE 1 - User wants to shrink the allocation
+        memcpy(ptr, oldptr, size);
+        return ptr;
+    } else {
+        // CASE 2 - User wants to grow the allocation
+        newptr = mm_malloc(size);
+        if (newptr == NULL) {
+            return NULL;   
+        }
+        memcpy(newptr, oldptr, old_size);
+        mm_free(oldptr);
+        return newptr;
+    }
+
+    assert(1==0);
     
-    //out of memory
+    newptr = mm_malloc(size);
     if (newptr == NULL)
         return NULL;
-	
-	copySize = GET_SIZE(HDRP(oldptr));
+
+    // Copy the old data.
+    copySize = GET_SIZE(HDRP(oldptr));
     if (size < copySize)
         copySize = size;
     memcpy(newptr, oldptr, copySize);
     mm_free(oldptr);
     return newptr;
+
 }
 
 /**********************************************************
