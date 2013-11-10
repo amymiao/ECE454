@@ -606,6 +606,7 @@ inline
 #endif
 int mm_check(void)
 {
+	int result = 1;
 #ifdef DEBUG
     void* start = heap_listp;
 
@@ -617,7 +618,7 @@ int mm_check(void)
     DPRINTF("Address: 0x%x\tSize: %d\tAllocated: %d [HEAP END]\n",start,GET_SIZE(HDRP(start)),GET_ALLOC(HDRP(start)));
     DPRINTF("\n");
 
-
+    
     //Free list consistency check - check to see if all blocks in the free list are indeed free
 
     int i;
@@ -636,6 +637,7 @@ int mm_check(void)
                 if (free_status == 1)
                 {
                     DPRINTF("ERROR: BLOCKS IN FREE LIST ARE ALLOCATED!\n\n\n");
+                    result=0;
                     break;
                 }
 
@@ -643,6 +645,7 @@ int mm_check(void)
                 if ((void*)traverse > mem_heap_hi() || (void*)traverse < heap_listp )
                 {
                     DPRINTF("ERROR: 0x%x in the free list is not found in the heap\n\n\n", traverse);
+                    result=0;
                     break;
                 }
 
@@ -665,18 +668,28 @@ int mm_check(void)
         if (size < (DSIZE+OVERHEAD) || ALIGN(size) != size )
         {
             DPRINTF("\nERROR: Address: 0x%x contains a block that is less than the minimum size\n", start);
+            result=0;
         }
 
         //DSIZE alignment check
         if (size % DSIZE)
         {
             DPRINTF("\nERROR: Address: 0x%x contains a block that is not aligned\n", start);
+            result=0;
         }
 
         //Header footer mismatch check
         if ( GET_SIZE(HDRP(start)) != GET_SIZE(FTRP(start)) )
         {
             DPRINTF("\nERROR: Address: 0x%x has a header that does not match its footer\n", start);
+            result=0;
+        }
+
+        //overlap check
+        if ( FTRP(start) > HDRP(NEXT_BLKP(start)) )
+        {
+        	DPRINTF("\nERROR: Address: 0x%x footer is greater than 0x:%x header\n", start, NEXT_BLKP(start));
+        	result=0;
         }
 
         //Coalesce check for contiguous free blocks (whether before or after)
@@ -691,5 +704,5 @@ int mm_check(void)
 
 #endif
 
-    return 1;
+    return result;
 }
