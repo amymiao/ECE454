@@ -447,7 +447,8 @@ void *mm_malloc(size_t size)
     //}
 
     /* No fit and no coalesce can be done. Get more memory and place the block */
-    extendsize = MAX(asize, CHUNKSIZE);
+    // Don't use a minimum size, we want to target utilization performance
+    extendsize = asize;
     if ((bp = extend_heap(extendsize/WSIZE)) == NULL)
         return NULL;
     place(bp, asize);
@@ -495,9 +496,9 @@ void *mm_realloc(void *ptr, size_t size)
     	//check if excess is >= MIN_BLOCK_SIZE for tearing
     	size_t excess = old_size - padded_size;
 
-        // FIXME right now its faster to not bother tearing. Doing this return gets us +2 utilization points
-        return oldptr;
-    	
+        // Can remove, but it does not impact performance
+    	return oldptr;
+
     	//tearing possible
     	if (excess >= 2*DSIZE)
     	{
