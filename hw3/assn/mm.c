@@ -89,7 +89,7 @@ typedef struct free_block {
 
 #define NUM_FREE_LISTS 8
 #define MIN_BLOCK_SIZE 32
-#define MIN_BLOCK_PWR 6
+#define MIN_BLOCK_PWR 5
 free_block* free_list_array[NUM_FREE_LISTS];
 
 
@@ -98,11 +98,12 @@ free_block* free_list_array[NUM_FREE_LISTS];
 int hash_function(int size) {
     int counter = 0;
     assert(size >= 2*DSIZE);
+    size--;
     while (size != 0) {
         size = size >> 1;
         counter++;
     }
-    assert(counter >= 6);
+    assert(counter >= MIN_BLOCK_PWR);
     counter = counter - MIN_BLOCK_PWR;
     return counter >= NUM_FREE_LISTS ? NUM_FREE_LISTS-1 : counter;
 }
@@ -258,7 +259,8 @@ void *deferred_coalesce(size_t size)
  	free_block* traverse = NULL;
 
  	int i;
- 	for (i=0; i < NUM_FREE_LISTS; i++)
+ //	for (i=0; i < NUM_FREE_LISTS; i++)
+ 	for (i=NUM_FREE_LISTS-1; i >= 0; i--)
  	{
  		traverse = free_list_array[i];
  		if (free_list_array[i] != NULL)	//list should not be empty
@@ -577,7 +579,7 @@ void *mm_realloc(void *ptr, size_t size)
         return oldptr;
     	
     	//tearing possible
-    	if (excess >= MIN_BLOCK_SIZE)
+    	if (excess >= 2*DSIZE)
     	{
     		//Fix the 2nd part of the block (the tear) - send this to the free list
     		newptr = (void *)oldptr+padded_size;	//get a pointer to the payload of the torn block
@@ -594,7 +596,7 @@ void *mm_realloc(void *ptr, size_t size)
     	}
 
     	//tearing impossible - excess data can not be torn
-    	if (excess < MIN_BLOCK_SIZE)
+    	if (excess < 2*DSIZE)
     	{
     		//DPRINTF("NO-TEAR CASE HAPPENED!\n");
     		return oldptr;
