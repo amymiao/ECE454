@@ -292,54 +292,48 @@ void * find_fit(size_t asize)
     int i;
     for (i=free_list_index; i < NUM_FREE_LISTS; i++) {
         if (free_list_array[i] != NULL) {
-            break;
+            free_block* temp = free_list_array[i];
+
+            do {
+                int size = GET_SIZE(HDRP(temp));
+                if (size >= asize && size < (asize + 2*DSIZE)) {
+                    // We found a block that can fit, but cannot be split into an excess free block
+                    // This is easy to resolve, simply remove it from the free list
+                    remove_from_list(temp);
+                    return (void*)temp;
+                } else if (size >= (asize + 2*DSIZE)) {
+                    // The block found has excess size and we can split the excess
+                    // into a free block
+                    // Example: Requested size = 4
+                    //          Found free block size = 10
+                    // [H1][ ][ ][ ][ ][ ][ ][ ][ ][F1]
+                    // newSize = 6
+                    remove_from_list(temp);
+                    int newSize = size - asize;
+
+                    // Point to the ending portion of the free block, so that
+                    // we can assign this portion to the user
+                    void* userPtr = (void*)temp + newSize;
+
+                    // Set the header/footer of the user required block with their requested size
+                    // Example (cont): [H1][ ][ ][ ][ ][ ][H2][ ][ ][F2]
+                    PUT(HDRP(userPtr), PACK(asize,0));
+                    PUT(FTRP(userPtr), PACK(asize,0));
+
+                    // Adjust the size of the free block
+                    // Example (cont): [H1][ ][ ][ ][ ][F1][H2][ ][ ][F2]
+                    PUT(HDRP(temp), PACK(newSize,0));
+                    PUT(FTRP(temp), PACK(newSize,0));
+
+                    add_to_list(temp);
+                    DPRINTF("AFTER FREE BLOCK SPLITTING");
+                    mm_check();
+                    return userPtr;
+                }
+                temp = temp->next;
+            } while (temp != free_list_array[free_list_index]);
         }
     }
-
-    if (i == NUM_FREE_LISTS) {
-        return NULL;
-    }
-
-    free_block* temp = free_list_array[i];
-
-    do {
-        int size = GET_SIZE(HDRP(temp));
-        if (size >= asize && size < (asize + 2*DSIZE)) {
-            // We found a block that can fit, but cannot be split into an excess free block
-            // This is easy to resolve, simply remove it from the free list
-            remove_from_list(temp);
-            return (void*)temp;
-        } else if (size >= (asize + 2*DSIZE)) {
-            // The block found has excess size and we can split the excess
-            // into a free block
-            // Example: Requested size = 4
-            //          Found free block size = 10
-            // [H1][ ][ ][ ][ ][ ][ ][ ][ ][F1]
-            // newSize = 6
-            remove_from_list(temp);
-            int newSize = size - asize;
-
-            // Point to the ending portion of the free block, so that
-            // we can assign this portion to the user
-            void* userPtr = (void*)temp + newSize;
-
-            // Set the header/footer of the user required block with their requested size
-            // Example (cont): [H1][ ][ ][ ][ ][ ][H2][ ][ ][F2]
-            PUT(HDRP(userPtr), PACK(asize,0));
-            PUT(FTRP(userPtr), PACK(asize,0));
-
-            // Adjust the size of the free block
-            // Example (cont): [H1][ ][ ][ ][ ][F1][H2][ ][ ][F2]
-            PUT(HDRP(temp), PACK(newSize,0));
-            PUT(FTRP(temp), PACK(newSize,0));
-
-            add_to_list(temp);
-            DPRINTF("AFTER FREE BLOCK SPLITTING");
-            mm_check();
-            return userPtr;
-        }
-        temp = temp->next;
-    } while (temp != free_list_array[free_list_index]);
     /*void *bp;
 
       for (bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp))
@@ -420,6 +414,23 @@ void *mm_malloc(size_t size)
     if (size == 0)
         return NULL;
 
+    /* Bit twiddling trick: Round up to the next power of 2.
+       By rounding up for smaller blocks, we increase the chance that a future larger request
+       will fit in a block we free. This has the benefit of reducing external fragmentation
+
+       Additionally, we choose a conservative number like 512 to reduce the risk of running out of
+       total memory.
+     */
+    if (size < 512) {
+        size--;
+        size |= size >> 1;
+        size |= size >> 2;
+        size |= size >> 4;
+        size |= size >> 8;
+        size |= size >> 16;
+        size++;
+    }
+
     /* Adjust block size to include overhead and alignment reqs. */
     if (size <= DSIZE)
         asize = DSIZE + OVERHEAD;
@@ -495,9 +506,6 @@ void *mm_realloc(void *ptr, size_t size)
     	//old_size = padded_size + excess 
     	//check if excess is >= MIN_BLOCK_SIZE for tearing
     	size_t excess = old_size - padded_size;
-
-        // Can remove, but it does not impact performance
-    	return oldptr;
 
     	//tearing possible
     	if (excess >= 2*DSIZE)
