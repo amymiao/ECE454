@@ -566,6 +566,23 @@ void *mm_realloc(void *ptr, size_t size)
     		return ptr;
     	}
 
+        // FIXME: Probably get rid of this. It ruins performance
+        // Coalesing still did not give us enough space. There is one more case we can try
+        // to take advantage of. If the original memory is at the end of the heap, we can
+        // extend_heap the size difference and use that.
+
+        /*if (GET_SIZE(HDRP(NEXT_BLKP(ptr))) == 0) {
+            // The ptr goes to the end of the heap
+            size_t extra_requested = padded_size - coalesced_size;
+
+            extend_heap(extra_requested/WSIZE);
+
+    		PUT(HDRP(ptr), PACK(padded_size,1));
+    		PUT(FTRP(ptr), PACK(padded_size,1));
+
+            return ptr;
+        }*/
+
         // Worst case scenario - This means an extend_heap will most likely be done
         newptr = mm_malloc(size);
         if (newptr == NULL) {
