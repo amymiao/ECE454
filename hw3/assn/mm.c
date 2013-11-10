@@ -242,86 +242,6 @@ void *coalesce(void *bp)
     }
 }
 
-
-/**********************************************************
- * deferred_coalesce
- * Look for blocks that can be coalesced together so an
- * sbrk can be prevented
- * Calls coalesce to do its heavy lifting
- **********************************************************/
-void *deferred_coalesce(size_t size)
-{
- 	DPRINTF("DEFERRED COALESCING\n");
- 	DPRINTF("FIND_FIT HAS RETURNED NULL SO ATTEMPT COALESCING\n");
- 	//We can't really be too smart about this because find_fit has already
- 	//searched the list where it will hope to find the index
- 	//This means we need to start out at the list that holds the smallest blocks
- 	free_block* traverse = NULL;
-
- 	int i;
- //	for (i=0; i < NUM_FREE_LISTS; i++)
- 	for (i=NUM_FREE_LISTS-1; i >= 0; i--)
- 	{
- 		traverse = free_list_array[i];
- 		if (free_list_array[i] != NULL)	//list should not be empty
- 		{
- 			do
- 			{
-
- 			   /* block is already in the free list so we don't need to do
- 				* anything besides removing it from the free list before we
- 				* coalesce. We have to be careful because when we reinsert 
- 				* the block back into the free list - there is a very high
- 				* chance that we will not end up in the same free list we 
- 				* started in
- 				*/
-
- 				//keep track of the next position in the current free block
- 				//Reasoning: If traverse coalesces but the coalesce still 
- 				//was not enough then it will get placed in another free list
- 				//thus breaking our traversal in this free list
- 				//we need to ensure we stay in the current free list
-
- 				remove_from_list(traverse);		//remove block from the free list
- 				
- 				//this can remove multiple blocks from the free list
- 				size_t old_size = GET_SIZE(HDRP(traverse));
- 				traverse = coalesce(traverse);
- 				size_t new_size = GET_SIZE(HDRP(traverse));
- 				if (GET_SIZE(HDRP(traverse)) >= size)
- 				{
- 					//mark allocated otherwise user will have the complication of getting the size and then doing it if they choose to do it
- 					PUT(HDRP(traverse), PACK(new_size, 1));
- 					PUT(FTRP(traverse), PACK(new_size, 1));
-
- 					return (void *)traverse;
- 				}
- 				else	//coalesced size < size requested
- 				{
- 					//put back in free list - this won't go back in the same free list
- 					//sanity and caution go hand-in-hand
- 					PUT(HDRP(traverse), PACK(new_size, 0));
- 					PUT(FTRP(traverse), PACK(new_size, 0));
- 					add_to_list(traverse);
- 				}
-
- 				if (old_size == new_size)
- 				{
- 					//still in the same list
- 					traverse = traverse->next;
- 				}
-
- 				else 
- 				{
- 					traverse = free_list_array[i];	//reset the pointer and start at the beginning
- 				}
- 			}
- 			while (traverse != free_list_array[i]);
- 		}
- 	}
- 	return NULL;	//could not find anything to give user - use sbrk
-}
-
 /**********************************************************
  * extend_heap
  * Extend the heap by "words" words, maintaining alignment
@@ -473,8 +393,8 @@ void mm_free(void *bp)
     PUT(FTRP(bp), PACK(size,0));
 
     // After coalescing, we can add the new (possibly bigger) free block to the free list
-    //add_to_list((free_block*)coalesce(bp));
-    add_to_list((free_block*)(bp));		//DO DEFERRED COALESCING SO DON'T COALESCE AFTER A FREE
+    add_to_list((free_block*)coalesce(bp));
+    //add_to_list((free_block*)(bp));		//DO DEFERRED COALESCING SO DON'T COALESCE AFTER A FREE
 
     DPRINTF("AFTER FREE:\n");
     mm_check();
@@ -518,13 +438,13 @@ void *mm_malloc(size_t size)
     }
 
     /* If we cannot find a fit in the free list - then we need to coalesce */
-    if ((bp = deferred_coalesce(asize)) != NULL)
-    {
-    	//already marks allocated
-    	DPRINTF("DEFERRED COALESCING - SERVICED MALLOC (0x%x)\n",bp);
-    	mm_check();
-    	return bp;
-    }
+    //if ((bp = deferred_coalesce(asize)) != NULL)
+    //{
+    //	//already marks allocated
+    //	DPRINTF("DEFERRED COALESCING - SERVICED MALLOC (0x%x)\n",bp);
+    //	mm_check();
+   	//  return bp;
+    //}
 
     /* No fit and no coalesce can be done. Get more memory and place the block */
     extendsize = MAX(asize, CHUNKSIZE);
