@@ -1,44 +1,44 @@
 /*
- *	Segregated-list allocator 
+ *	Segregated-list allocator
  *  -------------------------
  *
  *  This allocator builds on the implicit list allocator given to us by the Hallaron textbook
- *  The segregated list allocator uses a set of free lists that divide free blocks into classes. 
- *  Each list points to free blocks of different sizes. Whenever a malloc is called, 
- *  we can save time by doing a lookup on the list based on the size asked for and give a free 
- *  block of the appropriate size to the user. If no appropriate block is found in any of the 
+ *  The segregated list allocator uses a set of free lists that divide free blocks into classes.
+ *  Each list points to free blocks of different sizes. Whenever a malloc is called,
+ *  we can save time by doing a lookup on the list based on the size asked for and give a free
+ *  block of the appropriate size to the user. If no appropriate block is found in any of the
  *  free lists we will then malloc.
  *
- *  We use the policy of immediate coalescing. So, coalescing is attempted whenever mm_free() 
+ *  We use the policy of immediate coalescing. So, coalescing is attempted whenever mm_free()
  *  is called and whenever a size greater than the requested size for mm_realloc() is called.
- *  
+ *
  *	We use the first fit method when trying to acquire free blocks for the user. In the case
- *  where we find a block that is bigger than what the request is, we attempt to split the 
+ *  where we find a block that is bigger than what the request is, we attempt to split the
  * 	block. This helps improve space utilization.
  *
  *  When a realloc is done, we see if it was a shrink request and attempt to do a split. If
- *  a split can be done, we return the excess to the appropriate free list. If we can't do a 
+ *  a split can be done, we return the excess to the appropriate free list. If we can't do a
  *  split then we return the original block to the user. If the user wants to expand the block
- *  We attempt to coalesce the given block with the hopes of fulfilling the user's request. 
+ *  We attempt to coalesce the given block with the hopes of fulfilling the user's request.
  *  If the coalesce did not help, we call malloc and do a memmove in order to handle overlap
  *  and make sure the payload is maintained.
  *
  *	When the block is free, we use 2 pointers - stored in the first 16B of the payload to keep
- *  nodes connected in the free list (this ensures minimal overhead). We also use a header 
+ *  nodes connected in the free list (this ensures minimal overhead). We also use a header
  *  and footer in order to support forward and backward coalescing. A circular doubly-linked
- *  list is used to keep track of free blocks in each of the free lists. 
+ *  list is used to keep track of free blocks in each of the free lists.
  *
- *	When a block is free, we have 8 Bytes for the header, 8 Bytes for the footer, 8 bytes for 
+ *	When a block is free, we have 8 Bytes for the header, 8 Bytes for the footer, 8 bytes for
  *  the next pointer and 8 bytes for the previous pointer. Therefore our minimum block size
  *  is 32 Bytes. The pointers to next and previous are stored in the payload and are discarded
- *  once the free block is given to the user. 
+ *  once the free block is given to the user.
  *
  *  We round up blocks to powers of 2 when possible in malloc in order to achieve better space
  *  utilization when a block is freed. We align the block to the requirements of a double word
- *  We increase the chance that a future larger request will fit in a block we free. 
+ *  We increase the chance that a future larger request will fit in a block we free.
  *  This has the benefit of reducing external fragmentation
  *
- *  The free list header pointers are stored on the 'stack' which we are allowed to do 	
+ *  The free list header pointers are stored on the 'stack' which we are allowed to do
  *
  *  Pictorial representation of an arbitrary free block
  *  ---------------------------------------------------
@@ -47,12 +47,12 @@
  *   header    next ptr     prev ptr                      footer
  *
  *
- *	Pictorial representation of an allocated block 
+ *	Pictorial representation of an allocated block
  *  ----------------------------------------------
  *   _____________________________________________________________
  *  |size_8B_||payload___________________________________|size_8B_|
  *   header                                               footer
- *  
+ *
  *
  */
 #include <stdio.h>
@@ -129,7 +129,7 @@ int mm_check();
 void* heap_listp = NULL;
 
 /* Data structures for free list management BEGIN */
-typedef struct free_block 
+typedef struct free_block
 {
     struct free_block* next;
     struct free_block* prev;
@@ -145,16 +145,16 @@ free_block* free_list_array[NUM_FREE_LISTS];
 
 
 /*
- *	This function is responsible for mapping the requested 
- *  size to the corresponding free list and vice versa. 
+ *	This function is responsible for mapping the requested
+ *  size to the corresponding free list and vice versa.
  */
-int hash_function(int size) 
+int hash_function(int size)
 {
     int counter = 0;
     assert(size >= 2*DSIZE);
     size--;
-    while (size != 0) 
-	{
+    while (size != 0)
+    {
         size = size >> 1;	//use bit shifts to determine how long we take to get to MSB
         counter++;			//record MSb length
     }
@@ -163,15 +163,15 @@ int hash_function(int size)
     return counter >= NUM_FREE_LISTS ? NUM_FREE_LISTS-1 : counter;
 }
 
-/* 
+/*
  * This function removes a free block from the free_list
  * All it needs is a pointer to the free block and it can
- * determine in exactly which free list it is due to the 
- * hash_function. 
+ * determine in exactly which free list it is due to the
+ * hash_function.
  *
  * It also adjusts the free_list pointer for the corresponding
  * class size if needed - this is the case when a list has only
- * one element and the free list pointer of that class size 
+ * one element and the free list pointer of that class size
  * should be set to NULL
  *
  * Each list is a circular doubly link list structure
@@ -182,32 +182,32 @@ void remove_from_list(free_block* block) {
     size_t size = GET_SIZE(HDRP(block));
     int free_list_index = hash_function(size);
 
-    if (block == NULL) 
-	{
+    if (block == NULL)
+    {
         return;
     }
-	//double linked list free block removal
-    if (block != block->next) 
-	{
+    //double linked list free block removal
+    if (block != block->next)
+    {
         block->prev->next = block->next; // Make previous free block point to next free block
         block->next->prev = block->prev; // Make next free block point to previous free block
-        if (free_list_array[free_list_index] == block) 
-		{
+        if (free_list_array[free_list_index] == block)
+        {
             // If we are removing the head pointer, we must set a new head pointer
             free_list_array[free_list_index] = block->next;
         }
-    } 
-	else  
-	{
+    }
+    else
+    {
         free_list_array[free_list_index] = NULL;
     }
 }
 
 /*
  * This function adds a free block to the corresponding
- * free_list. It uses the hash_function to determine 
+ * free_list. It uses the hash_function to determine
  * which list the free block belongs to and puts the
- * block in that free list. 
+ * block in that free list.
  * Each list is a circular doubly link list structure
  */
 void add_to_list(free_block* temp)
@@ -258,8 +258,8 @@ int mm_init(void)
     heap_listp += DSIZE;
     // Initialize the free list
     int i;
-    for (i=0; i < NUM_FREE_LISTS; i++) 
-	{
+    for (i=0; i < NUM_FREE_LISTS; i++)
+    {
         free_list_array[i] = NULL;
     }
 
@@ -275,7 +275,7 @@ int mm_init(void)
  * - both neighbours are available for coalescing
  * This has been modified to work free lists
  * We remove blocks from the free list that corresponds
- * to the coalescing operation. This preserves the 
+ * to the coalescing operation. This preserves the
  * integrity of the free lists
  **********************************************************/
 void *coalesce(void *bp)
@@ -285,13 +285,13 @@ void *coalesce(void *bp)
     size_t next_alloc = GET_ALLOC(HDRP(NEXT_BLKP(bp)));
     size_t size = GET_SIZE(HDRP(bp));
 
-    if (prev_alloc && next_alloc) 
-	{   /* Case 1 */
+    if (prev_alloc && next_alloc)
+    {   /* Case 1 */
         return bp;
     }
 
-    else if (prev_alloc && !next_alloc) 
-	{ 	/* Case 2 */
+    else if (prev_alloc && !next_alloc)
+    {   /* Case 2 */
         // Remove the next free block from corresponding free_list
         free_block* temp = (free_block*)NEXT_BLKP(bp);
         remove_from_list(temp);
@@ -302,8 +302,8 @@ void *coalesce(void *bp)
         return (bp);
     }
 
-    else if (!prev_alloc && next_alloc) 
-	{ 	/* Case 3 */
+    else if (!prev_alloc && next_alloc)
+    {   /* Case 3 */
         // Remove the prev free block from corresponding free_list
         free_block* temp = (free_block*)PREV_BLKP(bp);
         remove_from_list(temp);
@@ -314,8 +314,8 @@ void *coalesce(void *bp)
         return (PREV_BLKP(bp));
     }
 
-    else 
-	{   /* Case 4 */
+    else
+    {   /* Case 4 */
         // Remove both the next and prev free blocks from corresponding free list
         free_block* temp = (free_block*)PREV_BLKP(bp);
         remove_from_list(temp);
@@ -352,18 +352,18 @@ void *extend_heap(size_t words)
     PUT(FTRP(bp), PACK(size, 0));                // free block footer
     PUT(HDRP(NEXT_BLKP(bp)), PACK(0, 1));        // new epilogue header
 
-   return bp;
+    return bp;
 }
 
 /**********************************************************
  * find_fit
  * First fit method
  * Traverse the free lists looking for free blocks
- * This will attempt to look in the list corresponding 
+ * This will attempt to look in the list corresponding
  * the size requested and start looking in bigger block lists
- * if it cannot find the requested size. 
- * Splitting will be done when possible (give the user 
- * a block that is more than what they asked for) 
+ * if it cannot find the requested size.
+ * Splitting will be done when possible (give the user
+ * a block that is more than what they asked for)
  **********************************************************/
 void * find_fit(size_t asize)
 {
@@ -376,24 +376,24 @@ void * find_fit(size_t asize)
     // If there is excess space in the free block we found, we
     // place the remainder back into the free list as a smaller free block
     int i;
-    for (i=free_list_index; i < NUM_FREE_LISTS; i++) 
-	{
-        if (free_list_array[i] != NULL) 
-		{
+    for (i=free_list_index; i < NUM_FREE_LISTS; i++)
+    {
+        if (free_list_array[i] != NULL)
+        {
             free_block* temp = free_list_array[i];
 
-            do 
-			{
+            do
+            {
                 int size = GET_SIZE(HDRP(temp));
-                if (size >= asize && size < (asize + 2*DSIZE)) 
-				{
+                if (size >= asize && size < (asize + 2*DSIZE))
+                {
                     // We found a block that can fit, but cannot be split into an excess free block
                     // This is easy to resolve, simply remove it from the free list
                     remove_from_list(temp);
                     return (void*)temp;
-                } 
-				else if (size >= (asize + 2*DSIZE)) 
-				{
+                }
+                else if (size >= (asize + 2*DSIZE))
+                {
                     // The block found has excess size and we can split the excess
                     // into a free block
                     // Example: Requested size = 4
@@ -417,15 +417,15 @@ void * find_fit(size_t asize)
                     PUT(HDRP(temp), PACK(newSize,0));
                     PUT(FTRP(temp), PACK(newSize,0));
 
-					// Return the excess part to the corresponding free list
+                    // Return the excess part to the corresponding free list
                     add_to_list(temp);
                     DPRINTF("AFTER FREE BLOCK SPLITTING");
                     mm_check();
                     return userPtr;
                 }
                 temp = temp->next;
-            } 
-			while (temp != free_list_array[free_list_index]);
+            }
+            while (temp != free_list_array[free_list_index]);
         }
     }
     return NULL;
@@ -449,21 +449,21 @@ void place(void* bp, size_t asize)
  * mm_free
  * Free the block and coalesce with neighbouring blocks
  * This function frees a block and inserts it into the free_list
- * There is no additional overhead, as the space we freed up is 
+ * There is no additional overhead, as the space we freed up is
  * used for the entry and is invisible to the user. Remember
  * that the pointers are stored in the payload
  **********************************************************/
 void mm_free(void *bp)
 {
-    if(bp == NULL) 
-	{
+    if(bp == NULL)
+    {
         return;
     }
     size_t size = GET_SIZE(HDRP(bp));
     DPRINTF("RECEIVED FREE (0x%x), size=%d\n",bp,size);
 
-    if (GET_ALLOC(HDRP(bp)) == 0) 
-	{
+    if (GET_ALLOC(HDRP(bp)) == 0)
+    {
         // Block was already freed
         DPRINTF("BLOCK ALREADY FREE\n");
         return;
@@ -485,12 +485,12 @@ void mm_free(void *bp)
 /**********************************************************
  * mm_malloc
  * Allocate a block of size bytes that is closest to a power
- * of 2 or that is just aligned to double word size and 
+ * of 2 or that is just aligned to double word size and
  * the overhead of a block header and footer (extra book-keeping
  * is stored in the payload when the block is freed)
  * The search for free blocks is determined by find_fit
  * The decision of splitting the block, or not is determined
- * in find_fit as well. 
+ * in find_fit as well.
  * If no block satisfies the request, the heap is extended
  **********************************************************/
 void *mm_malloc(size_t size)
@@ -553,9 +553,9 @@ void *mm_malloc(size_t size)
  * mm_realloc
  * If size is zero then this is just a free
  * If user is shrinking then check if we can tear of excess
- * and add it to the free list otherwise just give the 
+ * and add it to the free list otherwise just give the
  * pointer back to the user
- * If user is expanding the block then we coalesce in the 
+ * If user is expanding the block then we coalesce in the
  * hopes of fulfilling the request without having to use
  * malloc. Otherwise use malloc
  *********************************************************/
@@ -585,19 +585,19 @@ void *mm_realloc(void *ptr, size_t size)
         padded_size = DSIZE * ((size + (OVERHEAD) + (DSIZE-1))/ DSIZE);
 
     // Handle shrink case
-    if (padded_size <= old_size) 
+    if (padded_size <= old_size)
     {
-        // CASE 1 - User wants to shrink the allocation 
-    	//old_size = padded_size + excess 
-    	//check if excess is >= MIN_BLOCK_SIZE for tearing
-    	size_t excess = old_size - padded_size;
+        // CASE 1 - User wants to shrink the allocation
+        //old_size = padded_size + excess
+        //check if excess is >= MIN_BLOCK_SIZE for tearing
+        size_t excess = old_size - padded_size;
 
-    	//tearing possible
-    	if (excess >= 2*DSIZE)
-    	{
-    		//Fix the 2nd part of the block (the tear) - send this to the free list
-    		newptr = (void *)oldptr+padded_size;	//get a pointer to the payload of the torn block
-    		PUT(HDRP(newptr), PACK(excess,0));		//set the proper size for the header of the torn block - deallocate markation
+        //tearing possible
+        if (excess >= 2*DSIZE)
+        {
+            //Fix the 2nd part of the block (the tear) - send this to the free list
+            newptr = (void *)oldptr+padded_size;	//get a pointer to the payload of the torn block
+            PUT(HDRP(newptr), PACK(excess,0));		//set the proper size for the header of the torn block - deallocate markation
             PUT(FTRP(newptr), PACK(excess,0));		//set the proper size for the footer of the torn block - deallocate markation
             add_to_list((free_block*)newptr);
 
@@ -607,49 +607,49 @@ void *mm_realloc(void *ptr, size_t size)
             PUT(FTRP(oldptr), PACK(padded_size,1));		//^ for footer
             //DPRINTF("TORN CASE HAPPENED!\n");
             return oldptr;	//give this to the user
-    	}
+        }
 
-    	//tearing impossible - excess data can not be torn
-    	if (excess < 2*DSIZE)
-    	{
-    		//DPRINTF("NO-TEAR CASE HAPPENED!\n");
-    		return oldptr;
-    	}
-    } 
+        //tearing impossible - excess data can not be torn
+        if (excess < 2*DSIZE)
+        {
+            //DPRINTF("NO-TEAR CASE HAPPENED!\n");
+            return oldptr;
+        }
+    }
 
     //CASE 2 - Handle expand case
     //User wants more data
-    else 
+    else
     {
-    	
-    	//Attempt a coalesce 
-    	//use ptr to do the coalescing and oldptr will point to the payload
 
-    	//Mark as free so coalesce will not complain
-    	//old_size is what the block originally was
-    	PUT(HDRP(ptr), PACK(old_size,0));
-    	PUT(FTRP(ptr), PACK(old_size,0));
-    	ptr = coalesce(ptr);
+        //Attempt a coalesce
+        //use ptr to do the coalescing and oldptr will point to the payload
+
+        //Mark as free so coalesce will not complain
+        //old_size is what the block originally was
+        PUT(HDRP(ptr), PACK(old_size,0));
+        PUT(FTRP(ptr), PACK(old_size,0));
+        ptr = coalesce(ptr);
         mm_check();
-    	
-    	size_t coalesced_size = GET_SIZE(HDRP(ptr));
-    	if (coalesced_size >= padded_size)
-    	{
-    		//coalesce worked properly
-    		//remove the overhead so we can memcpy properly
-    		size_t payload_size = old_size-OVERHEAD;
-            // We have to use memmove because of potential overlap. Memcopy does not handle overlap
-    		memmove(ptr, oldptr, payload_size);	//shift the payload if necessary
 
-    		//fix the allocated bits - give to user
-    		PUT(HDRP(ptr), PACK(coalesced_size,1));
-    		PUT(FTRP(ptr), PACK(coalesced_size,1));
-    		return ptr;
-    	}
+        size_t coalesced_size = GET_SIZE(HDRP(ptr));
+        if (coalesced_size >= padded_size)
+        {
+            //coalesce worked properly
+            //remove the overhead so we can memcpy properly
+            size_t payload_size = old_size-OVERHEAD;
+            // We have to use memmove because of potential overlap. Memcopy does not handle overlap
+            memmove(ptr, oldptr, payload_size);	//shift the payload if necessary
+
+            //fix the allocated bits - give to user
+            PUT(HDRP(ptr), PACK(coalesced_size,1));
+            PUT(FTRP(ptr), PACK(coalesced_size,1));
+            return ptr;
+        }
         //Worst case scenario - This means an extend_heap will most likely be done
         newptr = mm_malloc(size);
-        if (newptr == NULL) 
-		{
+        if (newptr == NULL)
+        {
             printf("WTF?\n");
             return NULL;
         }
@@ -673,12 +673,12 @@ void *mm_realloc(void *ptr, size_t size)
  * 	Check the consistency of the memory heap
  * 	This is also responsible for printing out heap stats and
  * 	free list stats in addition to checking for errors in the
- *	allocator. 
+ *	allocator.
  *
- *	HOW TO USE: 
- *	This is enabled in DEBUG mode by default and has full 
+ *	HOW TO USE:
+ *	This is enabled in DEBUG mode by default and has full
  *  integration with functions to track every move of the dynamic
- *  memory allocator. Output can be piped to a file 
+ *  memory allocator. Output can be piped to a file
  *  (size goes to over 5-6GB) so use grep to find special terms
  *	In order to enable this, please do a make clean followed by
  *	a make CFLAGS+="-DDEBUG" and then run mdriver as you wish
@@ -695,8 +695,8 @@ void *mm_realloc(void *ptr, size_t size)
  *    footers
  *  - check if blocks on the heap are overlapping
  *
- *  There is also a coalescing check but that should only be 
- *  called only when mm_free() or mm_realloc() is called in 
+ *  There is also a coalescing check but that should only be
+ *  called only when mm_free() or mm_realloc() is called in
  *  order to report correctly. As a result this is commented out.
  *
  *********************************************************/
@@ -705,20 +705,20 @@ inline
 #endif
 int mm_check(void)
 {
-	int result = 1;
+    int result = 1;
 #ifdef DEBUG
     void* start = heap_listp;
 
     DPRINTF("\n\nHEAP STATS:\n");
-    while (GET_SIZE(HDRP(start)) != 0) 
-	{
+    while (GET_SIZE(HDRP(start)) != 0)
+    {
         DPRINTF("Address: 0x%x\tSize: %d\tAllocated: %d\n",start,GET_SIZE(HDRP(start)),GET_ALLOC(HDRP(start)));
         start = NEXT_BLKP(start);
     }
     DPRINTF("Address: 0x%x\tSize: %d\tAllocated: %d [HEAP END]\n",start,GET_SIZE(HDRP(start)),GET_ALLOC(HDRP(start)));
     DPRINTF("\n");
 
-    
+
     //Free list consistency check - check to see if all blocks in the free list are indeed free
 
     int i;
@@ -734,7 +734,7 @@ int mm_check(void)
                 size = GET_SIZE(HDRP(traverse));
                 free_status = GET_ALLOC(HDRP(traverse));
                 DPRINTF("Address in Free-List: 0x%x\tSize: %d\tAllocated: %d\n", traverse, size, free_status);
-				//make sure blocks in free list are actually free
+                //make sure blocks in free list are actually free
                 if (free_status == 1)
                 {
                     DPRINTF("ERROR: BLOCKS IN FREE LIST ARE ALLOCATED!\n\n\n");
@@ -757,7 +757,7 @@ int mm_check(void)
     }
 
     //Heap list consistency checker
-	start = heap_listp;
+    start = heap_listp;
     start = NEXT_BLKP(start); //skip the prologue block
     DPRINTF("\n\nBLOCK INFO STATS:\n");
     size = -1;
@@ -790,8 +790,8 @@ int mm_check(void)
         //overlap check
         if ( FTRP(start) > HDRP(NEXT_BLKP(start)) )
         {
-        	DPRINTF("\nERROR: Address: 0x%x footer is greater than 0x:%x header\n", start, NEXT_BLKP(start));
-        	result=0;
+            DPRINTF("\nERROR: Address: 0x%x footer is greater than 0x:%x header\n", start, NEXT_BLKP(start));
+            result=0;
         }
 
         //Coalesce check for contiguous free blocks (whether before or after)
