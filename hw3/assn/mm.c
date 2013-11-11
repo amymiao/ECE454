@@ -145,17 +145,17 @@ typedef struct free_block
 
 /* Book-keeping for segregated list implementation */
 #define NUM_FREE_LISTS 8	//8 free lists
-#define MIN_BLOCK_SIZE 32	//32B is the minimum block size
-#define MIN_BLOCK_PWR 5		//2^5 - Part of the sort mechanism in our hash function
+#define MIN_BLOCK_SIZE 32	//32B is the minimum block size we picked for our smallest free list (<=32)
+#define MIN_BLOCK_PWR 5		//2^5 - Part of the sort mechanism in our hash function, lg(MIN_BLOCK_SIZE)
 
 free_block* free_list_array[NUM_FREE_LISTS];
 /* Data structures for free list management END */
 
-
 /*
  *	This function is responsible for mapping the requested
  *  size to the corresponding free list and vice versa. It performs
- *  a base-2 logarithm to find the index of the correct free list
+ *  something similar to a base-2 logarithm on the size to find the index of the correct free
+ *  list. Given the typical inputs, it is basicaly an O(1) function.
  */
 int hash_function(int size)
 {
@@ -167,8 +167,7 @@ int hash_function(int size)
         size = size >> 1;	//use bit shifts to determine how long we take to get to MSB
         counter++;			//record MSb length
     }
-    assert(counter >= MIN_BLOCK_PWR);	//make sure size >= 2^5
-    counter = counter - MIN_BLOCK_PWR;
+    counter = MAX(counter - MIN_BLOCK_PWR, 0);
     return counter >= NUM_FREE_LISTS ? NUM_FREE_LISTS-1 : counter;
 }
 
@@ -609,7 +608,7 @@ void *mm_realloc(void *ptr, size_t size)
     {
         // CASE 1 - User wants to shrink the allocation
         //old_size = padded_size + excess
-        //check if excess is >= MIN_BLOCK_SIZE for tearing
+        //check if excess is >= min request size for tearing
         size_t excess = old_size - padded_size;
 
         //tearing possible
