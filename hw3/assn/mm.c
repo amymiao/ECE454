@@ -4,7 +4,7 @@
  *
  *  This allocator builds on the implicit list allocator given to us by the Hallaron textbook
  *  The segregated list allocator uses a set of free lists that divide free blocks into classes.
- *  Each list points to free blocks of different sizes. Whenever a malloc is called,
+ *  Each list holds a range of free block sizes. Whenever a malloc is called,
  *  we can save time by doing a lookup on the list based on the size asked for and give a free
  *  block of the appropriate size to the user. If no appropriate block is found in any of the
  *  free lists we will then malloc.
@@ -33,12 +33,14 @@
  *  is 32 Bytes. The pointers to next and previous are stored in the payload and are discarded
  *  once the free block is given to the user.
  *
- *  We round up blocks to powers of 2 when possible in malloc in order to achieve better space
- *  utilization when a block is freed. We align the block to the requirements of a double word
- *  We increase the chance that a future larger request will fit in a block we free.
+ *  We round up smaller requests (under 512B) to powers of 2 when possible in malloc in order to 
+ *  achieve better space utilization when a block is freed. We align the block to the requirements
+ *  of a double word. We increase the chance that a future larger request will fit in a block we free.
  *  This has the benefit of reducing external fragmentation
  *
- *  The free list header pointers are stored on the 'stack' which we are allowed to do
+ *  The free list header pointers are stored globally in the array free_list_array. The array size
+ *  is set to be NUM_FREE_LISTS, which we set as 8 in our implementation. As a result, the total
+ *  global overhead is 8*sizeof(free_block*) = 64B on a 64-bit system.
  *
  *  Pictorial representation of an arbitrary free block
  *  ---------------------------------------------------
@@ -53,7 +55,13 @@
  *  |size_8B_||payload___________________________________|size_8B_|
  *   header                                               footer
  *
- *
+ *  Free list size ranges:
+ *  Bucket 0:         size <= 32
+ *  Bucket 1: 33   <= size <= 64
+ *  Bucket 2: 65   <= size <= 128
+ *  ..............
+ *  Bucket 6: 1025 <= size <= 2048
+ *  Bucket 7:         size >  2048
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -146,7 +154,8 @@ free_block* free_list_array[NUM_FREE_LISTS];
 
 /*
  *	This function is responsible for mapping the requested
- *  size to the corresponding free list and vice versa.
+ *  size to the corresponding free list and vice versa. It performs
+ *  a base-2 logarithm to find the index of the correct free list
  */
 int hash_function(int size)
 {
@@ -256,7 +265,7 @@ int mm_init(void)
     PUT(heap_listp + (2 * WSIZE), PACK(OVERHEAD, 1));   // prologue footer
     PUT(heap_listp + (3 * WSIZE), PACK(0, 1));    		// epilogue header
     heap_listp += DSIZE;
-    // Initialize the free list
+    // Initialize the free lists to NULL
     int i;
     for (i=0; i < NUM_FREE_LISTS; i++)
     {
@@ -277,6 +286,9 @@ int mm_init(void)
  * We remove blocks from the free list that corresponds
  * to the coalescing operation. This preserves the
  * integrity of the free lists
+ * 
+ * Since all free blocks MUST be in the free list, we can safely
+ * assume any free block found can be removed via a call to remove_from list
  **********************************************************/
 void *coalesce(void *bp)
 {
@@ -372,7 +384,8 @@ void * find_fit(size_t asize)
     int free_list_index = hash_function(asize);
 
     mm_check();
-    // Traverse the free list and find the first fitting block
+    // Traverse the free lists starting from the most appropriately sized one
+    // and find the first fitting block. We search largest lists if nothing is found.
     // If there is excess space in the free block we found, we
     // place the remainder back into the free list as a smaller free block
     int i;
@@ -388,7 +401,8 @@ void * find_fit(size_t asize)
                 if (size >= asize && size < (asize + 2*DSIZE))
                 {
                     // We found a block that can fit, but cannot be split into an excess free block
-                    // This is easy to resolve, simply remove it from the free list
+                    // This is easy to resolve, simply remove it from the free list and
+                    // return it to the malloc request.
                     remove_from_list(temp);
                     return (void*)temp;
                 }
@@ -423,11 +437,14 @@ void * find_fit(size_t asize)
                     mm_check();
                     return userPtr;
                 }
+                // Move onto the next pointer
                 temp = temp->next;
             }
-            while (temp != free_list_array[free_list_index]);
+            while (temp != free_list_array[free_list_index]); // Continue until we are back where we started
         }
     }
+
+    // Could not find a free block anywhere, let malloc handle this
     return NULL;
 }
 
@@ -464,7 +481,7 @@ void mm_free(void *bp)
 
     if (GET_ALLOC(HDRP(bp)) == 0)
     {
-        // Block was already freed
+        // Block was already freed, just return
         DPRINTF("BLOCK ALREADY FREE\n");
         return;
     }
@@ -475,6 +492,8 @@ void mm_free(void *bp)
     PUT(FTRP(bp), PACK(size,0));
 
     // After coalescing, we can add the new (possibly bigger) free block to the free list
+    // We do not need to worry about duplicates, as the coalesce function will remove free
+    // blocks from the free_list as it groups them.
     add_to_list((free_block*)coalesce(bp));
 
     DPRINTF("AFTER FREE:\n");
@@ -506,7 +525,7 @@ void *mm_malloc(size_t size)
 
     /* Bit twiddling trick: Round up to the next power of 2.
        By rounding up for smaller blocks, we increase the chance that a future larger request
-       will fit in a block we free. This has the benefit of reducing external fragmentation
+       (likely a realloc) will fit in a block we free. This has the benefit of reducing external fragmentation
 
        Additionally, we choose a conservative number like 512 to reduce the risk of running out of
        total memory.
@@ -538,6 +557,7 @@ void *mm_malloc(size_t size)
     }
 
     // Don't use a minimum size, we want to target utilization performance
+    // so extend the heap exactly by the request
     extendsize = asize;
     if ((bp = extend_heap(extendsize/WSIZE)) == NULL)
         return NULL;
@@ -625,7 +645,7 @@ void *mm_realloc(void *ptr, size_t size)
         //Attempt a coalesce
         //use ptr to do the coalescing and oldptr will point to the payload
 
-        //Mark as free so coalesce will not complain
+        //Mark as free so coalesce will be able to do its job
         //old_size is what the block originally was
         PUT(HDRP(ptr), PACK(old_size,0));
         PUT(FTRP(ptr), PACK(old_size,0));
@@ -646,11 +666,11 @@ void *mm_realloc(void *ptr, size_t size)
             PUT(FTRP(ptr), PACK(coalesced_size,1));
             return ptr;
         }
-        //Worst case scenario - This means an extend_heap will most likely be done
+        //Worst case scenario - This means an extend_heap will most likely be done, unless there is a free block available
         newptr = mm_malloc(size);
         if (newptr == NULL)
         {
-            printf("WTF?\n");
+            DPRINTF("Out of memory\n");
             return NULL;
         }
 
@@ -699,6 +719,8 @@ void *mm_realloc(void *ptr, size_t size)
  *  called only when mm_free() or mm_realloc() is called in
  *  order to report correctly. As a result this is commented out.
  *
+ *  On normal build (no debug), this function is inlined and just returns 1
+ *  so it should be optimized out
  *********************************************************/
 #ifndef DEBUG
 inline
@@ -709,6 +731,8 @@ int mm_check(void)
 #ifdef DEBUG
     void* start = heap_listp;
 
+    // This prints out a nicely formatted table of the entire heap, showing everything
+    // that is allocated and unallocated, including the size of each
     DPRINTF("\n\nHEAP STATS:\n");
     while (GET_SIZE(HDRP(start)) != 0)
     {
@@ -719,14 +743,15 @@ int mm_check(void)
     DPRINTF("\n");
 
 
-    //Free list consistency check - check to see if all blocks in the free list are indeed free
-
+    // Free list consistency check - check to see if all blocks in the free list are indeed free
+    // Additionally, it prints out a nicely formatted table of all free list "buckets" and the free
+    // blocks they contain
     int i;
     int size = -1;
     int free_status = -1;
     for (i=0; i < NUM_FREE_LISTS; i++) {
         free_block* traverse = free_list_array[i];
-        DPRINTF("\nFREE LIST STATS (Range %d-%d):\n",MIN_BLOCK_SIZE << i,MIN_BLOCK_SIZE << (i+1));
+        DPRINTF("\nFREE LIST STATS (Range %d-%d):\n",(MIN_BLOCK_SIZE/2 << i)+1,MIN_BLOCK_SIZE/2 << (i+1));
         if (traverse != NULL)
         {
             do
