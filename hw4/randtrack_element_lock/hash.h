@@ -1,4 +1,3 @@
-
 #ifndef HASH_H
 #define HASH_H
 
@@ -7,7 +6,7 @@
 #include <pthread.h>
 
 #define HASH_INDEX(_addr,_size_mask) (((_addr) >> 2) & (_size_mask))
-pthread_mutex_t mutex_list[16384]; 
+pthread_mutex_t mutex_list[16384]; //figure out actual number  - I think this is 14
 
 template<class Ele, class Keytype> class hash;
 
