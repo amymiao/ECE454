@@ -4,18 +4,21 @@
 
 #include <stdio.h>
 #include "list.h"
+#include <pthread.h>
 
 #define HASH_INDEX(_addr,_size_mask) (((_addr) >> 2) & (_size_mask))
+pthread_mutex_t mutex_list[16384]; 
 
 template<class Ele, class Keytype> class hash;
 
-template<class Ele, class Keytype> class hash {
+template<class Ele, class Keytype> class hash 
+{
  private:
   unsigned my_size_log;
   unsigned my_size;
   unsigned my_size_mask;
   list<Ele,Keytype> *entries;
-  list<Ele,Keytype> *get_list(unsigned the_idx);
+  list<Ele,Keytype> *get_list(unsigned the_idx); 
 
  public:
   void setup(unsigned the_size_log=5);
@@ -24,7 +27,25 @@ template<class Ele, class Keytype> class hash {
   void print(FILE *f=stdout);
   void reset();
   void cleanup();
+  void locklist(Keytype the_key);
+  void unlocklist(Keytype the_key);
 };
+
+template<class Ele, class Keytype> 
+void
+hash<Ele,Keytype>::unlocklist(Keytype the_key)
+{ 
+    pthread_mutex_unlock( &mutex_list[HASH_INDEX(the_key,my_size_mask)] );
+}
+
+template<class Ele, class Keytype> 
+void
+hash<Ele,Keytype>::locklist(Keytype the_key)
+{ 
+    pthread_mutex_lock( &mutex_list[HASH_INDEX(the_key,my_size_mask)] );
+}  
+
+
 
 template<class Ele, class Keytype> 
 void 
@@ -47,10 +68,10 @@ hash<Ele,Keytype>::get_list(unsigned the_idx){
 
 template<class Ele, class Keytype> 
 Ele *
-hash<Ele,Keytype>::lookup(Keytype the_key){
+hash<Ele,Keytype>::lookup(Keytype the_key)
+{
   list<Ele,Keytype> *l;
-
-  l = &entries[HASH_INDEX(the_key,my_size_mask)];
+  l = &entries[HASH_INDEX(the_key,my_size_mask)]; 
   return l->lookup(the_key);
 }  
 
@@ -83,7 +104,8 @@ hash<Ele,Keytype>::cleanup(){
 
 template<class Ele, class Keytype> 
 void 
-hash<Ele,Keytype>::insert(Ele *e){
+hash<Ele,Keytype>::insert(Ele *e)
+{
   entries[HASH_INDEX(e->key(),my_size_mask)].push(e);
 }
 

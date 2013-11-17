@@ -83,12 +83,12 @@ void* sampleCollection(void* input_params)
             {
                 rnum = rand_r((unsigned int*)&rnum);
             }
+          
+            // force the sample to be within the range of 0..RAND_NUM_UPPER_BOUND-1
+            key = rnum % RAND_NUM_UPPER_BOUND;
             //TM LOCK
             __transaction_atomic
             {
-                // force the sample to be within the range of 0..RAND_NUM_UPPER_BOUND-1
-                key = rnum % RAND_NUM_UPPER_BOUND;
-
                 // if this sample has not been counted before
                 if (!(s = h.lookup(key)))   //this part of the code must be serialized - it would be nice to serialize lookups per individual bucket
                 {

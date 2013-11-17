@@ -13,7 +13,8 @@
  * ECE454 Students: 
  * Please fill in the following team struct 
  */
-team_t team = {
+team_t team = 
+{
     "Team Name",                           /* Team name */
     "Everard Francis",                     /* First member full name */
     "999999999",                           /* First member student number */
@@ -45,8 +46,13 @@ class sample
 // it is a C++ template, which means we define the types for
 // the element and key value here: element is "class sample" and
 // key value is "unsigned".  
-hash<sample,unsigned> h;
 
+//create multiple hash tables, each thread gets their own
+hash<sample,unsigned> h;
+hash<sample,unsigned> i;
+hash<sample,unsigned> j;
+hash<sample,unsigned> k;
+hash<sample,unsigned> master;
 
 /*
  *  Struct for passing information to threads
@@ -55,10 +61,8 @@ struct thread_args
 {
     int start;
     int end;
+    hash<sample,unsigned> * input_hash_table;
 };
-
-//mutex lock for data preservation
-pthread_mutex_t mutex_h;    //mutex lock for hash table access
 
 /*
  * Sample Collection function
@@ -84,31 +88,57 @@ void* sampleCollection(void* input_params)
                 rnum = rand_r((unsigned int*)&rnum);
             }
 
-            //lock - critical section begin
-            pthread_mutex_lock(&mutex_h); 
-
             // force the sample to be within the range of 0..RAND_NUM_UPPER_BOUND-1
             key = rnum % RAND_NUM_UPPER_BOUND;
 
+
             // if this sample has not been counted before
-            if (!(s = h.lookup(key)))   //this part of the code must be serialized - it would be nice to serialize lookups per individual bucket
+            if (!(s = (grabInput->input_hash_table)->lookup(key)))   //this part of the code must be serialized - it would be nice to serialize lookups per individual bucket
             {
 
                 // insert a new element for it into the hash table
                 s = new sample(key);
-                h.insert(s);    //we may need to serialize this as well - we can put a big lock on this section
+                (grabInput->input_hash_table)->insert(s);    //we may need to serialize this as well - we can put a big lock on this section
             }
-
             // increment the count for the sample
             s->count++;
-
-            //unlock - critical section finish
-            pthread_mutex_unlock(&mutex_h);
-        }
+       }
     }
     pthread_exit(NULL);
 }
 
+//custom testing
+void print_hash_table(hash<sample,unsigned> *ptr_ht)
+{
+    unsigned i;
+    sample *s;
+    for (i = 0; i < RAND_NUM_UPPER_BOUND ; i++)
+    {
+        if ((s = ptr_ht->lookup(i)))
+            printf("%d %d\n", i, s->count); 
+    }
+}
+//custom transfer
+void transfer_results(hash<sample,unsigned> *ptr_dest, hash<sample,unsigned> *ptr_src)
+{
+    unsigned i;
+    sample *s;
+    sample *d;
+    for (i = 0; i < RAND_NUM_UPPER_BOUND; i++)
+    {
+        //check if number exists in the source
+        if ( (s = ptr_src->lookup(i)) )
+        {
+            //check if the number exists in the destination - if not then insert it
+            if ( !(d = ptr_dest->lookup(i)) )
+            {
+                d = new sample(i);      //create a new sample of this random number
+                ptr_dest->insert(d);    //insert number into hash table
+            }
+            d->count += s->count;       //include all the count from the src hash table and put it in the destination hash table
+        }
+    }
+}
 
 
 int  
@@ -137,9 +167,10 @@ main (int argc, char* argv[])
 
     // initialize a 16K-entry (2**14) hash of empty lists
     h.setup(14);
-
-    // initialize mutual exclusion lock for h, the hash table
-    pthread_mutex_init(&mutex_h, NULL);
+    i.setup(14);
+    j.setup(14);
+    k.setup(14);
+    master.setup(14);
 
     switch(num_threads)
     {
@@ -150,9 +181,13 @@ main (int argc, char* argv[])
             struct thread_args t1_args;
             t1_args.start = 0;
             t1_args.end = NUM_SEED_STREAMS;
+            t1_args.input_hash_table = &h;
             pthread_create(&tid1, NULL, &sampleCollection, &t1_args);
-
             pthread_join(tid1, NULL);  //we are not interested in the function returns
+            
+            transfer_results(&master, &h);
+            print_hash_table(&master);
+	        //h.print();
             break;
         }
 
@@ -166,10 +201,12 @@ main (int argc, char* argv[])
             //set up thread 1 slice computation
             t1_args.start   = 0;
             t1_args.end     = 2;
+            t1_args.input_hash_table = &h;
 
             //set up thread 2 slice computation
             t2_args.start   = 2;   //continue from where last thread left off 
             t2_args.end     = 4;
+            t2_args.input_hash_table = &i;
 
             //start thread-work
             pthread_create(&tid[0], NULL, &sampleCollection, &t1_args);
@@ -178,6 +215,12 @@ main (int argc, char* argv[])
             //join threads
             pthread_join(tid[0], NULL);  //we are not interested in the function returns
             pthread_join(tid[1], NULL);
+
+            //synchronize information
+            transfer_results(&master, &h);
+            transfer_results(&master, &i);
+            print_hash_table(&master);
+
             break;
         }
 
@@ -193,18 +236,22 @@ main (int argc, char* argv[])
             //set up thread 1 slice computation
             t1_args.start   = 0;
             t1_args.end     = 1;
+            t1_args.input_hash_table = &h;
 
             //set up thread 2 slice computation
             t2_args.start   = 1;   
             t2_args.end     = 2;
+            t2_args.input_hash_table = &i;
 
             //set up thread 3 slice computation
             t3_args.start   = 2;   
             t3_args.end     = 3;
+            t3_args.input_hash_table = &j;
 
             //set up thread 4 slice computation
             t4_args.start   = 3;   
             t4_args.end     = 4;
+            t4_args.input_hash_table = &k;
 
             //start thread-work
             pthread_create(&tid[0], NULL, &sampleCollection, &t1_args);
@@ -217,15 +264,17 @@ main (int argc, char* argv[])
             pthread_join(tid[1], NULL);
             pthread_join(tid[2], NULL);
             pthread_join(tid[3], NULL);
+
+            //synchronize information
+            transfer_results(&master, &h);
+            transfer_results(&master, &i);
+            transfer_results(&master, &j);
+            transfer_results(&master, &k);
+            print_hash_table(&master);
+
             break;
         }
     }
-    // print a list of the frequency of all samples
-    h.print();
-
-    //destroy mutex
-    pthread_mutex_destroy(&mutex_h);
-    
     //exit program
     pthread_exit(NULL);
 }
