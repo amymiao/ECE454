@@ -1,3 +1,11 @@
+Name: Everard Francis
+Student Number: 997412811
+Email: Everard.Francis@mail.utoronto.ca
+
+Name: Calvin Fernandes
+Student Number: 997588873
+Email: Calvin.Fernandes@mail.utoronto.ca
+
 Q1)
 It is important to ifdef out methods and data-structures that are not being used because there is a high possibility that the code for a previous version would be interacting with the current version. For example, if global locks was coded and then list locks were being implemented. The global lock code would be present affecting the thread function in randtrack thereby giving you an inaccurate picture. Also, if methods/procedures were previously modified – there is a high chance that the same procedure would need to be used in another implementation causing problems again. Also, if you declare data structures and do not use them – they take up memory. Additionally, ifdef helps isolate different implementations of the code.
 
@@ -66,4 +74,4 @@ samples_to_skip | time (baseline) | time (parallelization) | difference
 200             | 69.67           | 71.16                  | 1.5
 400             | 138.65          | 140.16                 | 1.5
 
-Q12) Based on our results, we found that reduction was always better.  The reduction method allows the threads to work on separate sections of data, allowing them to operate at maximum speed since they do not depend on each other.  
+Q12) Based on our results, we found that reduction was always better.  The reduction method allows the threads to work on separate sections of data, allowing them to operate at maximum speed since they do not depend on each other.  While it gives good performance, it does so at the cost of memory.  Therefore, computers with a large amount of processors may need to decide which factor is more important, and set the number of threads based on their requirements.
