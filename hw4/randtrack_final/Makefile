@@ -1,6 +1,6 @@
 
 CC = g++-4.7
-CFLAGS = -O3 -g -pg
+CFLAGS = -O3 
 
 all: randtrack randtrack_global_lock randtrack_tm randtrack_list_lock randtrack_element_lock randtrack_reduction
 
