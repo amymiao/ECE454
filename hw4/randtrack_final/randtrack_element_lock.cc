@@ -35,11 +35,9 @@ class sample
     public:
     sample *next;
     unsigned count;
-	pthread_mutex_t element_lock;	//mutex lock per object (node/element)
 
     sample(unsigned the_key)
     {
-    	pthread_mutex_init(&element_lock, NULL);	//initialize mutex properly
     	my_key = the_key; 
     	count = 0;
     };
