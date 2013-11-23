@@ -28,7 +28,7 @@ Q7)
 Implementing TM locks was significantly easier as no functions had to be modified and the inner workings of the hash class did not need to be understood. 
  
 Q8)
-The nice part about the reduction approach is no synchronization is needed during collection of samples because each thread is working on its own private copy of the hash table. This allows work to be done in parallel without enforcing atomicity which slows down the work. The bad part about this approach is that the combining time at the end (summing entries if they occur in two tables/inserting them into the final table if it doesn’t exist) may start to take a significant toll for large computations thereby negating the time savings gained from the purely parallel part of the computation.
+The nice part about the reduction approach is no synchronization is needed during collection of samples because each thread is working on its own private copy of the hash table. This allows work to be done in parallel without enforcing atomicity which slows down the work. The bad part about this approach is that the combining time at the end (summing entries if they occur in two tables/inserting them into the final table if it doesn’t exist) may start to take a significant toll for large computations thereby negating the time savings gained from the purely parallel part of the computation.  An additional con for this method is that a duplicate hash table is created per thread causing a larger memory overhead. This can lead to scalability issues for large working sets.
 
 Q9) All runtimes are in seconds:
 Baseline:
@@ -57,7 +57,7 @@ Overhead: 1.000561798
 
 Q10) Generally, runtime decreased meaning performance increased with number of threads.  Exceptions to this were:
 - Global locks. The performance of 4 threads was worse than both 1 and 2.
-- What is happening is that there are multiple threads waiting to execute, however access to the list has to be atomic, so most of the threads are just waiting to acquire the lock. The overhead of threads trying to acquire the lock increases the total time.  * (look into more)
+- What is happening is that there are multiple threads waiting to execute, however access to the list has to be atomic, so most of the threads are just waiting to acquire the lock. The overhead of threads trying to acquire the lock increases the total time.  This overhead causes performance hits based on the real world amdahl's speedup law.
 
 Q11) By doubling the samples to skip, the percentage overhead for each parallel version with one thread was cut in half, except for the reduction which slightly decreased but was already at almost 0%.
 
