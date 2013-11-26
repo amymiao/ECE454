@@ -57,8 +57,6 @@ struct thread_args
     int end;
 };
 
-//mutex lock for data preservation
-pthread_mutex_t mutex_h;    //mutex lock for hash table access
 
 /*
  * Sample Collection function
@@ -133,8 +131,6 @@ main (int argc, char* argv[])
     // initialize a 16K-entry (2**14) hash of empty lists
     h.setup(14);
 
-    // initialize mutual exclusion lock for h, the hash table
-    pthread_mutex_init(&mutex_h, NULL);
 
     switch(num_threads)
     {
@@ -218,9 +214,6 @@ main (int argc, char* argv[])
     // print a list of the frequency of all samples
     h.print();
 
-    //destroy mutex
-    pthread_mutex_destroy(&mutex_h);
-    
     //exit program
     pthread_exit(NULL);
 }
