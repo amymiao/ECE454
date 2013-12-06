@@ -47,15 +47,17 @@ threaded_game_of_life (void * inputs)
      * At the end of a generation, a thread must wait for all other threads to complete
      * We use a barrier to do this. This makes sure that all threads read the same board data
      */
-    // OPTIMIZATION NOTE: Flip the loops for caches. Traverse horizontally on each row.
+    // Optimization Note: Flip the loops for caches. Traverse horizontally on each row.
     for(curgen=0; curgen<gens_max; curgen++) 
     {
         for(j=0; j<ncols; j++)
         {
+            // Optimization Note: Simplify mod calculation
             const int jwest = j ? j-1 : ncols-1;
             const int jeast = (j != ncols-1) ? j+1 : 0;
             for(i=start_index; i<=end_index; i++) 
             {
+                // Optimization Note: Simplify mod calculation
                 const int inorth = i ? (i-1) : nrows-1;
                 const int isouth = (i != nrows-1) ? i+1 : 0;
                 const char neighbor_count = 
@@ -118,8 +120,8 @@ game_of_life (char* outboard,
     t_input[i].nrows        =       nrows;
     t_input[i].gens_max     =       gens_max;
     t_input[i].LDA          =       LDA;
-    t_input[i].start_index  =       i*nrows/4;
-    t_input[i].end_index    =       ((i+1)*nrows/4)-1;
+    t_input[i].start_index  =       i*nrows/NUM_THREADS;
+    t_input[i].end_index    =       ((i+1)*nrows/NUM_THREADS)-1;
   }
   
   /*
