@@ -6,6 +6,7 @@
 #include "util.h"
 #include <pthread.h>
 
+
 /*****************************************************************************
  * Helper function definitions
  ****************************************************************************/
@@ -23,7 +24,73 @@
 } while(0)
 
 #define BOARD( __board, __i, __j )  (__board[(__i) + LDA*(__j)])
- 
+
+//Loop Unroll helper
+inline void unroll_helper(const unsigned int i, const unsigned int LDA, const unsigned int ncols,
+                          const unsigned int nrows, char* outboard, char* inboard)
+{
+    // Optimization Note: Simplify mod calculation
+    const int inorth = i ? (i-1) : nrows-1;
+    const int isouth = (i != nrows-1) ? i+1 : 0;
+    
+    //LDA setup needed to replace BOARD macro
+    const unsigned int LDA_inorth = LDA * inorth;
+    const unsigned int LDA_isouth = LDA * isouth;
+    const unsigned int LDA_i = LDA*i;
+
+    /* As we move across the board, there is overlap when counting neighbours:
+     * Neighbour of X:
+     * OAA
+     * OXY
+     * OAA
+     *
+     * Neighbours of Y:
+     * AAO
+     * XYO
+     * AAO
+     *
+     * Notice neighbours, "A", overlap. We can reduce the computation by storing their sum
+     */
+    char prev = 
+        inboard[LDA_inorth + ncols-1] +
+        inboard[LDA_isouth + ncols-1];
+    char cur = 
+        inboard[LDA_inorth] +
+        inboard[LDA_isouth]; 
+
+    unsigned int j;
+    for(j=0; j<ncols; j++) 
+    {
+        const int jwest = j ? j-1 : ncols-1;
+        const int jeast = (j != ncols-1) ? j+1 : 0;
+
+        const char next = 
+            inboard[LDA_inorth + jeast] +
+            inboard[LDA_isouth + jeast];
+
+        // Optimization Note : Removed extra pointer access + LICM
+        const char neighbor_count =
+            cur +
+            prev +
+            next +
+            inboard[LDA_i + jwest] +
+            inboard[LDA_i+jeast];
+
+        prev = cur;
+        cur = next;
+            
+        // Optimization Note : Replace alivep algorithm
+        unsigned char alivep_result;
+        if(neighbor_count == 3)
+                alivep_result = 1;
+        else if (neighbor_count == 2 && inboard[LDA_i+j])
+                alivep_result = 1;
+        else
+                alivep_result = 0;
+        
+        outboard[LDA_i+j] = alivep_result;
+    }
+}
  
 //Implement main game loop here
 void *
@@ -31,7 +98,7 @@ threaded_game_of_life (void * inputs)
 {
     //recast to proper input argument structure
     thread_input* input_args = (thread_input*) inputs;
-    int curgen, i, j;
+    int curgen, i;
     
     char *inboard = input_args->inboard;
     char *outboard = input_args->outboard;
@@ -42,6 +109,7 @@ threaded_game_of_life (void * inputs)
     const int end_index = input_args->end_index;
     const int gens_max = input_args->gens_max;
     
+    
     /* Each thread will work on a horizontal segment of the board
      * This segment is defined by the rows start_index and end_index
      * At the end of a generation, a thread must wait for all other threads to complete
@@ -50,75 +118,18 @@ threaded_game_of_life (void * inputs)
     // Optimization Note: Flip the loops for caches. Traverse horizontally on each row.
     for(curgen=0; curgen<gens_max; curgen++) 
     {
-        for(i=start_index; i <= end_index; i++)
+        for(i=start_index; i <= end_index; i+=1)
         {
-            // Optimization Note: Simplify mod calculation
-            const int inorth = i ? (i-1) : nrows-1;
-            const int isouth = (i != nrows-1) ? i+1 : 0;
-            
-            //LDA setup needed to replace BOARD macro
-            const unsigned int LDA_inorth = LDA * inorth;
-            const unsigned int LDA_isouth = LDA * isouth;
-            const unsigned int LDA_i = LDA*i;
-
-            /* As we move across the board, there is overlap when counting neighbours:
-             * Neighbour of X:
-             * OAA
-             * OXY
-             * OAA
-             *
-             * Neighbours of Y:
-             * AAO
-             * XYO
-             * AAO
-             *
-             * Notice neighbours, "A", overlap. We can reduce the computation by storing their sum
-             */
-            char prev = 
-                inboard[LDA_inorth + ncols-1] +
-                inboard[LDA_isouth + ncols-1];
-            char cur = 
-                inboard[LDA_inorth] +
-                inboard[LDA_isouth]; 
-
-            for(j=0; j<ncols; j++) 
-            {
-                const int jwest = j ? j-1 : ncols-1;
-                const int jeast = (j != ncols-1) ? j+1 : 0;
-
-                const char next = 
-                    inboard[LDA_inorth + jeast] +
-                    inboard[LDA_isouth + jeast];
-
-                // Optimization Note : Removed extra pointer access + LICM
-                const char neighbor_count =
-                    cur +
-                    prev +
-                    next +
-                    inboard[LDA_i + jwest] +
-                    inboard[LDA_i+jeast];
-
-                prev = cur;
-                cur = next;
-                    
-                // Optimization Note : Replace alivep algorithm
-                unsigned char alivep_result;
-                if(neighbor_count == 3)
-                        alivep_result = 1;
-                else if (neighbor_count == 2 && inboard[LDA_i+j])
-                        alivep_result = 1;
-                else
-                        alivep_result = 0;
-                
-                outboard[LDA_i+j] = alivep_result;
-            }
+            unroll_helper(i, LDA, ncols, nrows, outboard, inboard);
         }
-
+        
         // Wait till all threads are done before switching the boards and continuing,
         // for consistency
         pthread_barrier_wait(input_args->barr);
         SWAP_BOARDS(outboard, inboard);
     }
+    //safely return
+    pthread_exit(NULL);
 }
  
  
