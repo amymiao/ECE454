@@ -55,29 +55,45 @@ threaded_game_of_life (void * inputs)
             // Optimization Note: Simplify mod calculation
             const int jwest = j ? j-1 : ncols-1;
             const int jeast = (j != ncols-1) ? j+1 : 0;
+            
+            //LDA setup needed to replace BOARD macro
+            const unsigned int LDA_jeast = LDA * jeast;
+            const unsigned int LDA_jwest = LDA * jwest;
+            const unsigned int LDA_j = LDA*j;
+    
             for(i=start_index; i<=end_index; i++) 
             {
                 // Optimization Note: Simplify mod calculation
                 const int inorth = i ? (i-1) : nrows-1;
                 const int isouth = (i != nrows-1) ? i+1 : 0;
-                const char neighbor_count = 
-                    BOARD (input_args->inboard, inorth, jwest) + 
-                    BOARD (input_args->inboard, inorth, j) + 
-                    BOARD (input_args->inboard, inorth, jeast) + 
-                    BOARD (input_args->inboard, i, jwest) +
-                    BOARD (input_args->inboard, i, jeast) + 
-                    BOARD (input_args->inboard, isouth, jwest) +
-                    BOARD (input_args->inboard, isouth, j) + 
-                    BOARD (input_args->inboard, isouth, jeast);
+                const char neighbor_count =
+                // Optimization Note : Simplify BOARD macro with pointer arithmetic
+                    inboard[inorth + LDA_jwest] +
+                    inboard[inorth + LDA_j] +
+                    inboard[inorth + LDA_jeast] +
+                    inboard[i + LDA_jwest] +
+                    inboard[i + LDA_jeast] +
+                    inboard[isouth + LDA_jwest] +
+                    inboard[isouth + LDA_j] +
+                    inboard[isouth + LDA_jeast];
+                    
+                // Optimization Note : Replace alivep algorithm
+                unsigned char alivep_result;
+                if(neighbor_count == 3)
+                        alivep_result = 1;
+                else if (neighbor_count == 2 && inboard[i+LDA_j])
+                        alivep_result = 1;
+                else
+                        alivep_result = 0;
                 
-                BOARD(input_args->outboard, i, j) = alivep(neighbor_count, BOARD (input_args->inboard, i, j));
+                outboard[i+LDA_j] = alivep_result;
             }
         }
 
         // Wait till all threads are done before switching the boards and continuing,
         // for consistency
         pthread_barrier_wait(input_args->barr);
-        SWAP_BOARDS(input_args->outboard, input_args->inboard);
+        SWAP_BOARDS(outboard, inboard);
     }
 }
  
