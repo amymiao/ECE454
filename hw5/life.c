@@ -90,8 +90,8 @@ threaded_game_of_life (void * inputs)
                     inboard[LDA_inorth + jeast] +
                     inboard[LDA_isouth + jeast];
 
+                // Optimization Note : Removed extra pointer access + LICM
                 const char neighbor_count =
-                // Optimization Note : Removed extra pointer access
                     cur +
                     prev +
                     next +
@@ -112,8 +112,6 @@ threaded_game_of_life (void * inputs)
                 
                 outboard[LDA_i+j] = alivep_result;
             }
-            //printf("\n");
-            //while (1==1) {}
         }
 
         // Wait till all threads are done before switching the boards and continuing,
