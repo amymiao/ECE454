@@ -61,6 +61,19 @@ threaded_game_of_life (void * inputs)
             const unsigned int LDA_isouth = LDA * isouth;
             const unsigned int LDA_i = LDA*i;
 
+            /* As we move across the board, there is overlap when counting neighbours:
+             * Neighbour of X:
+             * OAA
+             * OXY
+             * OAA
+             *
+             * Neighbours of Y:
+             * AAO
+             * XYO
+             * AAO
+             *
+             * Notice neighbours, "A", overlap. We can reduce the computation by storing their sum
+             */
             char prev = 
                 inboard[LDA_inorth + ncols-1] +
                 inboard[LDA_isouth + ncols-1];
@@ -73,23 +86,17 @@ threaded_game_of_life (void * inputs)
                 const int jwest = j ? j-1 : ncols-1;
                 const int jeast = (j != ncols-1) ? j+1 : 0;
 
-                char next = 
-                    inboard[LDA_inorth + jwest] +
-                    inboard[LDA_isouth + jwest];
+                const char next = 
+                    inboard[LDA_inorth + jeast] +
+                    inboard[LDA_isouth + jeast];
 
                 const char neighbor_count =
                 // Optimization Note : Removed extra pointer access
-                    cur+prev+next+inboard[LDA_i + jwest]+inboard[LDA_i+jeast];
-                    /*inboard[LDA_inorth + jwest] +
-                    inboard[LDA_inorth + j] +
-                    inboard[LDA_inorth + jeast] +
+                    cur +
+                    prev +
+                    next +
                     inboard[LDA_i + jwest] +
-                    inboard[LDA_i + jeast] +
-                    inboard[LDA_isouth + jwest] +
-                    inboard[LDA_isouth + j] +
-                    inboard[LDA_isouth + jeast];*/
-
-                //printf("(%d %d %d %d) ",prev,cur,next,neighbor_count);
+                    inboard[LDA_i+jeast];
 
                 prev = cur;
                 cur = next;

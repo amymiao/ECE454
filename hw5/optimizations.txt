@@ -22,3 +22,8 @@ Optimization 5: Optimizing alivep by replacing it with simple if-else:
 128: Time 0.47, Speedup 6.51063829787234
 512: Time 6.05, Speedup 8.01652892561983
 1k: Time 22.95, Speedup 8.71459694989107
+
+Optimization 6: Reducing computation of neighbor_count, by eliminating duplicate computation
+128: Time 0.50, Speedup 6.12
+512: Time 5.90, Speedup 8.22
+1k: Time 22.27, Speedup 8.98
