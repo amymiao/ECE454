@@ -12,7 +12,7 @@ for (my $x=0; $x < scalar(@cases); $x++) {
         $time[$x] = $1;
     }
     my $speedup = $baseline[$x] / $time[$x];
-    print "$cases[$x]: Time $time[$x], Speedup $speedup\n";
+    printf("$cases[$x]: Time $time[$x], Speedup %.2f\n",$speedup);
     my $diff = `diff outputs/$cases[$x].pbm outputs/$cases[$x]$baseline_str.pbm`;
     if ($diff ne "") {
         print "ERROR: Diff does not match for $cases[$x]\n";
