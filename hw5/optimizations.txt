@@ -1,0 +1,14 @@
+Optimization 1: Adding threads. Horizontally divide up the board
+128: Time 2.19, Speedup 1.3972602739726
+512: Time 11.33, Speedup 4.28067078552515
+1k: Time 45.66, Speedup 4.38020148926851
+
+Optimization 2: Flipping loops (cache optimization). Horizontally move through the board, row by row
+128: Time 0.80, Speedup 3.825
+512: Time 9.30, Speedup 5.21505376344086
+1k: Time 35.37, Speedup 5.65450947130337
+
+Optimization 3: Optimizing mod function by simplifying it.
+128: Time 0.53, Speedup 5.77358490566038
+512: Time 6.30, Speedup 7.6984126984127
+1k: Time 23.73, Speedup 8.42815002107037
