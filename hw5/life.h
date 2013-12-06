@@ -47,6 +47,10 @@ typedef struct thread_input
     int nrows;
     int ncols;
     int gens_max;
+    int start_index;
+    int end_index;
+    int LDA;
+    
 } thread_input;
 
 #endif /* _life_h */

@@ -31,29 +31,25 @@ threaded_game_of_life (void * inputs)
 {
     //recast to proper input argument structure
     thread_input* input_args = (thread_input*) inputs;
-    
-    //just leaving LDA the same as before except now passing from thread arguments
-    const int LDA = input_args->nrows;
     int curgen, i, j;
     
-    //specify thread specific boundaries and parameters
-    //breakdown into segments using thread id and columns
-    int column_start = ((input_args->ncols)/NUM_THREADS) * (input_args->tid);
-    int column_end   = ((input_args->ncols)/NUM_THREADS) * (input_args->tid + 1);
+    const int LDA = input_args->LDA;
+    const int nrows = input_args->nrows;
+    const int ncols = input_args->ncols;
+    const int start_index = input_args->start_index;
+    const int end_index = input_args->end_index;
+    const int gens_max = input_args->gens_max;
     
-    //normal outer loop
-    for (curgen = 0; curgen < input_args->gens_max; curgen++)
+    for(curgen=0; curgen<gens_max; curgen++) 
     {
-        //flipped the iterators so it strides nicely for increased cache hits
-        for (j=0; j<(input_args->nrows); j++)
+        for(i=start_index; i<=end_index; i++) 
         {
-            //This is the main segmented computation done on a thread by thread basis
-            for (i=column_start; i<column_end; i++)
+            const int inorth = mod (i-1, nrows);
+            const int isouth = mod (i+1, nrows);
+            for(j=0; j<ncols; j++)
             {
-                const int inorth = mod (i-1, input_args->nrows);
-                const int isouth = mod (i+1, input_args->nrows);
-                const int jwest = mod (j-1,  input_args->ncols);
-                const int jeast = mod (j+1,  input_args->ncols);
+                const int jwest = mod (j-1, ncols);
+                const int jeast = mod (j+1, ncols);
                 
                 const char neighbor_count = 
                     BOARD (input_args->inboard, inorth, jwest) + 
@@ -65,14 +61,12 @@ threaded_game_of_life (void * inputs)
                     BOARD (input_args->inboard, isouth, j) + 
                     BOARD (input_args->inboard, isouth, jeast);
                 
-                BOARD(input_args->outboard, i, j) = alivep (neighbor_count, BOARD (input_args->inboard, i, j));
+                BOARD(input_args->outboard, i, j) = alivep(neighbor_count, BOARD (input_args->inboard, i, j));
             }
         }
-        SWAP_BOARDS(input_args->outboard, input_args->inboard);
-        //synchronize threads so they can begin the next iteration together
         pthread_barrier_wait(input_args->barr);
+        SWAP_BOARDS(input_args->outboard, input_args->inboard);
     }
-    pthread_exit(NULL);
 }
  
  
@@ -87,8 +81,11 @@ game_of_life (char* outboard,
 	      const int gens_max)
 {
   
+  //initial setup
+  const int LDA = nrows;
+  
   //lower than the minimum size - do this in case someone runs N < 32
-  if (nrows < 32)
+  if (nrows > 32)
     return sequential_game_of_life (outboard, inboard, nrows, ncols, gens_max);
   
   //Setup pthread and synchronization primitives
@@ -100,13 +97,16 @@ game_of_life (char* outboard,
   int i;
   for(i=0;i<NUM_THREADS;i++)
   {
-    t_input[i].tid       =       i;
-    t_input[i].barr      =       &barr;
-    t_input[i].inboard   =       inboard;
-    t_input[i].outboard  =       outboard;
-    t_input[i].ncols     =       ncols;
-    t_input[i].nrows     =       nrows;
-    t_input[i].gens_max  =       gens_max;
+    t_input[i].tid          =       i;
+    t_input[i].barr         =       &barr;
+    t_input[i].inboard      =       inboard;
+    t_input[i].outboard     =       outboard;
+    t_input[i].ncols        =       ncols;
+    t_input[i].nrows        =       nrows;
+    t_input[i].gens_max     =       gens_max;
+    t_input[i].LDA          =       LDA;
+    t_input[i].start_index  =       i*nrows/4;
+    t_input[i].end_index    =       ((i+1)*nrows/4)-1;
   }
   
   /*
