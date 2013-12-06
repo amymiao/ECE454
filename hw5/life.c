@@ -50,44 +50,63 @@ threaded_game_of_life (void * inputs)
     // Optimization Note: Flip the loops for caches. Traverse horizontally on each row.
     for(curgen=0; curgen<gens_max; curgen++) 
     {
-        for(j=0; j<ncols; j++)
+        for(i=start_index; i <= end_index; i++)
         {
             // Optimization Note: Simplify mod calculation
-            const int jwest = j ? j-1 : ncols-1;
-            const int jeast = (j != ncols-1) ? j+1 : 0;
+            const int inorth = i ? (i-1) : nrows-1;
+            const int isouth = (i != nrows-1) ? i+1 : 0;
             
             //LDA setup needed to replace BOARD macro
-            const unsigned int LDA_jeast = LDA * jeast;
-            const unsigned int LDA_jwest = LDA * jwest;
-            const unsigned int LDA_j = LDA*j;
-    
-            for(i=start_index; i<=end_index; i++) 
+            const unsigned int LDA_inorth = LDA * inorth;
+            const unsigned int LDA_isouth = LDA * isouth;
+            const unsigned int LDA_i = LDA*i;
+
+            char prev = 
+                inboard[LDA_inorth + ncols-1] +
+                inboard[LDA_isouth + ncols-1];
+            char cur = 
+                inboard[LDA_inorth] +
+                inboard[LDA_isouth]; 
+
+            for(j=0; j<ncols; j++) 
             {
-                // Optimization Note: Simplify mod calculation
-                const int inorth = i ? (i-1) : nrows-1;
-                const int isouth = (i != nrows-1) ? i+1 : 0;
+                const int jwest = j ? j-1 : ncols-1;
+                const int jeast = (j != ncols-1) ? j+1 : 0;
+
+                char next = 
+                    inboard[LDA_inorth + jwest] +
+                    inboard[LDA_isouth + jwest];
+
                 const char neighbor_count =
                 // Optimization Note : Removed extra pointer access
-                    inboard[inorth + LDA_jwest] +
-                    inboard[inorth + LDA_j] +
-                    inboard[inorth + LDA_jeast] +
-                    inboard[i + LDA_jwest] +
-                    inboard[i + LDA_jeast] +
-                    inboard[isouth + LDA_jwest] +
-                    inboard[isouth + LDA_j] +
-                    inboard[isouth + LDA_jeast];
+                    cur+prev+next+inboard[LDA_i + jwest]+inboard[LDA_i+jeast];
+                    /*inboard[LDA_inorth + jwest] +
+                    inboard[LDA_inorth + j] +
+                    inboard[LDA_inorth + jeast] +
+                    inboard[LDA_i + jwest] +
+                    inboard[LDA_i + jeast] +
+                    inboard[LDA_isouth + jwest] +
+                    inboard[LDA_isouth + j] +
+                    inboard[LDA_isouth + jeast];*/
+
+                //printf("(%d %d %d %d) ",prev,cur,next,neighbor_count);
+
+                prev = cur;
+                cur = next;
                     
                 // Optimization Note : Replace alivep algorithm
                 unsigned char alivep_result;
                 if(neighbor_count == 3)
                         alivep_result = 1;
-                else if (neighbor_count == 2 && inboard[i+LDA_j])
+                else if (neighbor_count == 2 && inboard[LDA_i+j])
                         alivep_result = 1;
                 else
                         alivep_result = 0;
                 
-                outboard[i+LDA_j] = alivep_result;
+                outboard[LDA_i+j] = alivep_result;
             }
+            //printf("\n");
+            //while (1==1) {}
         }
 
         // Wait till all threads are done before switching the boards and continuing,
@@ -113,8 +132,6 @@ game_of_life (char* outboard,
   const int LDA = nrows;
   
   //lower than the minimum size - do this in case someone runs N < 32
-  if (nrows < 32)
-    return sequential_game_of_life (outboard, inboard, nrows, ncols, gens_max);
   
   //Setup pthread and synchronization primitives
   pthread_t tid[NUM_THREADS];
