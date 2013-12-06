@@ -67,7 +67,7 @@ threaded_game_of_life (void * inputs)
                 const int inorth = i ? (i-1) : nrows-1;
                 const int isouth = (i != nrows-1) ? i+1 : 0;
                 const char neighbor_count =
-                // Optimization Note : Simplify BOARD macro with pointer arithmetic
+                // Optimization Note : Removed extra pointer access
                     inboard[inorth + LDA_jwest] +
                     inboard[inorth + LDA_j] +
                     inboard[inorth + LDA_jeast] +

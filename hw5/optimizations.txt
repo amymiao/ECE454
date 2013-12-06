@@ -13,7 +13,7 @@ Optimization 3: Optimizing mod function by simplifying it.
 512: Time 6.30, Speedup 7.6984126984127
 1k: Time 23.73, Speedup 8.42815002107037
 
-Optimization 4: Optimizing BOARD by replacing it with pointer arithmetic:
+Optimization 4: Optimizing BOARD with 1 less pointer access:
 128: Time 0.51, Speedup 6
 512: Time 6.20, Speedup 7.82258064516129
 1k: Time 23.23, Speedup 8.6095566078347
