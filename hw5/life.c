@@ -33,6 +33,8 @@ threaded_game_of_life (void * inputs)
     thread_input* input_args = (thread_input*) inputs;
     int curgen, i, j;
     
+    char *inboard = input_args->inboard;
+    char *outboard = input_args->outboard;
     const int LDA = input_args->LDA;
     const int nrows = input_args->nrows;
     const int ncols = input_args->ncols;
