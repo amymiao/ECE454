@@ -136,7 +136,13 @@ game_of_life (char* outboard,
   //initial setup
   const int LDA = nrows;
   
-  //lower than the minimum size - do this in case someone runs N < 32
+  //Guard against corner cases as asked by the assignment (N=32 and N=10000)
+  if (nrows < 32)
+    return sequential_game_of_life (outboard, inboard, nrows, ncols, gens_max);
+  
+  else if (nrows > 10000)
+    return (char*)0;
+  
   
   //Setup pthread and synchronization primitives
   pthread_t tid[NUM_THREADS];
@@ -176,6 +182,9 @@ game_of_life (char* outboard,
     pthread_create(&tid[i], NULL, threaded_game_of_life, (void*) &t_input[i]);
   }
   
+  /*
+   *  Wait for all threads to join before returning a board
+   */
   for(i=0;i<NUM_THREADS;i++)
   {
     pthread_join(tid[i], NULL);
