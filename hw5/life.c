@@ -33,6 +33,8 @@ threaded_game_of_life (void * inputs)
     thread_input* input_args = (thread_input*) inputs;
     int curgen, i, j;
     
+    char *inboard = input_args->inboard;
+    char *outboard = input_args->outboard;
     const int LDA = input_args->LDA;
     const int nrows = input_args->nrows;
     const int ncols = input_args->ncols;
@@ -85,7 +87,7 @@ game_of_life (char* outboard,
   const int LDA = nrows;
   
   //lower than the minimum size - do this in case someone runs N < 32
-  if (nrows > 32)
+  if (nrows < 32)
     return sequential_game_of_life (outboard, inboard, nrows, ncols, gens_max);
   
   //Setup pthread and synchronization primitives
