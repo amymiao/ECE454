@@ -52,12 +52,12 @@ threaded_game_of_life (void * inputs)
     {
         for(j=0; j<ncols; j++)
         {
-            const int jwest = mod (j-1, ncols);
-            const int jeast = mod (j+1, ncols);
+            const int jwest = j ? j-1 : ncols-1;
+            const int jeast = (j != ncols-1) ? j+1 : 0;
             for(i=start_index; i<=end_index; i++) 
             {
-                const int inorth = mod (i-1, nrows);
-                const int isouth = mod (i+1, nrows);
+                const int inorth = i ? (i-1) : nrows-1;
+                const int isouth = (i != nrows-1) ? i+1 : 0;
                 const char neighbor_count = 
                     BOARD (input_args->inboard, inorth, jwest) + 
                     BOARD (input_args->inboard, inorth, j) + 
