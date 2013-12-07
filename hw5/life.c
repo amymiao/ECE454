@@ -159,23 +159,21 @@ threaded_game_of_life (void * inputs)
 
                 // Optimization Note : Removed extra pointer access + LICM
                 const char neighbor_count =
-                    cur +
                     prev +
+                    cur +
                     next +
                     inboard[LDA_i + jwest] +
-                    inboard[LDA_i+jeast];
+                    inboard[LDA_i + jeast];
 
                 prev = cur;
                 cur = next;
                     
                 // Optimization Note : Replace alivep algorithm
-                unsigned char alivep_result;
+                unsigned char alivep_result = 0;
                 if(neighbor_count == 3)
                         alivep_result = 1;
                 else if (neighbor_count == 2 && inboard[LDA_i+j])
                         alivep_result = 1;
-                else
-                        alivep_result = 0;
                 
                 outboard[LDA_i+j] = alivep_result;
             }
