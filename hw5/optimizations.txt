@@ -33,3 +33,8 @@ Optimization 7: Moved inner loop to an inline function which helped the compiler
 512: Time 5.75, Speedup 8.43
 1k: Time 21.98, Speedup 9.10
 
+
+Optimization 8: Removing else from alivep. Gcc didn't optimize this.
+128: Time 0.50, Speedup 6.12
+512: Time 5.80, Speedup 8.36
+1k: Time 21.80, Speedup 9.17
