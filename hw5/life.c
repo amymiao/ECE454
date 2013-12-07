@@ -136,10 +136,16 @@ game_of_life (char* outboard,
 {
   //Guard against corner cases as asked by the assignment (N=32 and N=10000)
   if (nrows < 32)
+  {
+    printf("Warning: Sequential Game of Life is being used to compute your input\n");
     return sequential_game_of_life (outboard, inboard, nrows, ncols, gens_max);
+  }
   
   else if (nrows > 10000)
+  {
+    printf("Error: nrows = %d. Please ensure 32 < nrows < 10000\n", nrows);
     return (char*)0;
+  }
   
   //Setup pthread and synchronization primitives
   pthread_t tid[NUM_THREADS];
