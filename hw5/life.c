@@ -136,10 +136,10 @@ game_of_life (char* outboard,
 {
   //Guard against corner cases as asked by the assignment (N=32 and N=10000)
   if (nrows < 32)
+  {
+    // Lab says we do not need to parallelize less than 32
     return sequential_game_of_life (outboard, inboard, nrows, ncols, gens_max);
-  
-  else if (nrows > 10000)
-    return (char*)0;
+  }
   
   //Setup pthread and synchronization primitives
   pthread_t tid[NUM_THREADS];
