@@ -42,6 +42,18 @@ load_dimensions (FILE* input, int* nrows, int* ncols)
       fclose (input);
       exit (EXIT_FAILURE);
     }
+  if (*nrows > 10000)
+    {
+      fprintf (stderr, "*** Number of rows %d must not exceed 10000! ***\n", *nrows);
+      fclose (input);
+      exit (EXIT_FAILURE);
+    }
+  if (*ncols > 10000)
+    {
+      fprintf (stderr, "*** Number of cols %d must not exceed 10000! ***\n", *ncols);
+      fclose (input);
+      exit (EXIT_FAILURE);
+    }
 }
 
 static char*
