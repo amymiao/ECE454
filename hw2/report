@@ -1,6 +1,4 @@
 ECE454: Assignment 2
-Everard Francis: 	997412811
-Calvin Fernandes:	997588873
 Optimizations
 
 When optimizing this algorithm, we followed the principles discussed in class and implemented several solutions to exploit ILP, LICM, tiling, branch reduction and loop unrolling.  Perfstat was used to confirm our improvements and our progress is highlighted below:
